@@ -13,8 +13,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body, #root { height: 100%; }
-    body { overscroll-behavior: none; }
+    html, body { height: 100%; overflow: hidden; }
+    #root { height: 100%; }
   </style>
 </head>
 <body>
@@ -69,111 +69,77 @@ const INITIAL_FECHAS = [
   {id:"f4",name:"Viaje Japón",type:"unica",date:"2026-10-24",emoji:"🗾"},
 ];
 
-const MONTHS_FULL = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const DAYS_SHORT  = ["D","L","M","M","J","V","S"];
-const DAYS_FULL   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-const PERSONS     = ["Camilo","Paola","Luis Torres","Marcela","David","Patricia","Jhony","Adriana","Claudia","Henry","Grace","Leo","Víctor","Bibiana","Samuel","Fabián"];
-const CATS = [
-  {id:"laboral", label:"Laboral",    color:"#1B4FD8",bg:"#EEF4FF",dot:"🔵"},
-  {id:"personal",label:"Personal",   color:"#7C3AED",bg:"#F5F3FF",dot:"🟣"},
-  {id:"sin",     label:"Sin definir",color:"#64748B",bg:"#F1F5F9",dot:"⚪"},
-];
-const STATUS_CFG = {
-  pendiente:  {label:"Pendiente",  color:"#64748B"},
-  en_proceso: {label:"En proceso", color:"#1B4FD8"},
-  esperando:  {label:"Esperando",  color:"#EA580C"},
-  listo:      {label:"✓ Listo",    color:"#16A34A"},
-};
-const STATUS_CYCLE = ["pendiente","en_proceso","esperando","listo"];
-const TIPO_CONFIG = {
-  anual:  {label:"Anual",  desc:"Misma fecha cada año",icon:"📅",color:"#1B4FD8",bg:"#EEF4FF"},
-  mensual:{label:"Mensual",desc:"Misma fecha cada mes",icon:"🔁",color:"#059669",bg:"#ECFDF5"},
-  unica:  {label:"Única",  desc:"Solo ocurre una vez", icon:"📌",color:"#DC2626",bg:"#FEF2F2"},
-};
+const MONTHS_FULL=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAYS_SHORT=["D","L","M","M","J","V","S"];
+const DAYS_FULL=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const PERSONS=["Camilo","Paola","Luis Torres","Marcela","David","Patricia","Jhony","Adriana","Claudia","Henry","Grace","Leo","Víctor","Bibiana","Samuel","Fabián"];
+const CATS=[{id:"laboral",label:"Laboral",color:"#1B4FD8",bg:"#EEF4FF",dot:"🔵"},{id:"personal",label:"Personal",color:"#7C3AED",bg:"#F5F3FF",dot:"🟣"},{id:"sin",label:"Sin definir",color:"#64748B",bg:"#F1F5F9",dot:"⚪"}];
+const STATUS_CFG={pendiente:{label:"Pendiente",color:"#64748B"},en_proceso:{label:"En proceso",color:"#1B4FD8"},esperando:{label:"Esperando",color:"#EA580C"},listo:{label:"✓ Listo",color:"#16A34A"}};
+const STATUS_CYCLE=["pendiente","en_proceso","esperando","listo"];
+const TIPO_CONFIG={anual:{label:"Anual",desc:"Misma fecha cada año",icon:"📅",color:"#1B4FD8",bg:"#EEF4FF"},mensual:{label:"Mensual",desc:"Misma fecha cada mes",icon:"🔁",color:"#059669",bg:"#ECFDF5"},unica:{label:"Única",desc:"Solo ocurre una vez",icon:"📌",color:"#DC2626",bg:"#FEF2F2"}};
 
 // ─── HELPERS ─────────────────────────────────────────────────
-const dateStr=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const todayStr=()=>dateStr(new Date());
-const getSem=(ds)=>{const d=(Date.now()-new Date(ds))/86400000;return d<3?"#22C55E":d<7?"#F59E0B":"#EF4444";};
-const fmt=(ds)=>new Date(ds).toLocaleDateString("es-CO",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const ds=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const todayStr=()=>ds(new Date());
+const getSem=(s)=>{const d=(Date.now()-new Date(s))/86400000;return d<3?"#22C55E":d<7?"#F59E0B":"#EF4444";};
+const fmt=(s)=>new Date(s).toLocaleDateString("es-CO",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const daysUntilBday=(day,month)=>{const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());let next=new Date(now.getFullYear(),month-1,day);if(next<today)next.setFullYear(now.getFullYear()+1);return Math.round((next-today)/86400000);};
 const isSameDay=(day,month)=>{const n=new Date();return n.getDate()===day&&(n.getMonth()+1)===month;};
 const daysUntilFecha=(f)=>{const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(f.type==="unica")return Math.round((new Date(f.date)-today)/86400000);if(f.type==="mensual"){let n=new Date(now.getFullYear(),now.getMonth(),f.day);if(n<=today)n=new Date(now.getFullYear(),now.getMonth()+1,f.day);return Math.round((n-today)/86400000);}if(f.type==="anual"){let n=new Date(now.getFullYear(),f.month-1,f.day);if(n<=today)n=new Date(now.getFullYear()+1,f.month-1,f.day);return Math.round((n-today)/86400000);}return 999;};
 const formatFechaLabel=(f)=>{if(f.type==="mensual")return`Día ${f.day} de cada mes`;if(f.type==="anual")return`${f.day} de ${MONTHS_FULL[f.month]} cada año`;if(f.type==="unica")return new Date(f.date).toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"});return "";};
+const dueSem=(s)=>{if(!s)return null;const today=new Date();today.setHours(0,0,0,0);const d=new Date(s);d.setHours(0,0,0,0);const diff=Math.round((d-today)/86400000);if(diff<0)return{color:"#EF4444",label:"Vencida",bg:"#FEF2F2"};if(diff===0)return{color:"#F59E0B",label:"Hoy",bg:"#FEF3C7"};return{color:"#22C55E",label:`${diff}d`,bg:"#F0FDF4"};};
+const fmtDue=(s)=>{if(!s)return"";return new Date(s).toLocaleDateString("es-CO",{day:"numeric",month:"short"});};
+const moveArr=(arr,idx,dir)=>{const to=idx+dir;if(to<0||to>=arr.length)return arr;const a=[...arr];[a[idx],a[to]]=[a[to],a[idx]];return a;};
 
-// Fecha tentativa helpers
-const dueDateSem=(dateStr)=>{
-  if(!dateStr) return null;
-  const today=new Date(); today.setHours(0,0,0,0);
-  const d=new Date(dateStr); d.setHours(0,0,0,0);
-  const diff=Math.round((d-today)/86400000);
-  if(diff<0) return {color:"#EF4444",label:"Vencida",bg:"#FEF2F2"};
-  if(diff===0) return {color:"#F59E0B",label:"Hoy",bg:"#FEF3C7"};
-  return {color:"#22C55E",label:`${diff}d`,bg:"#F0FDF4"};
-};
-const fmtDueDate=(ds)=>{if(!ds)return"";const d=new Date(ds);return d.toLocaleDateString("es-CO",{day:"numeric",month:"short"});};
+// ─── STORAGE helpers ─────────────────────────────────────────
+const load=(key,def=[])=>{try{const v=JSON.parse(localStorage.getItem(key));return v&&Array.isArray(v)?v:def;}catch{return def;}};
+const save=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch{}};
+const loadObj=(key,def={})=>{try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:def;}catch{return def;}};
 
 // ─── BACKUP ──────────────────────────────────────────────────
-const doBackup=()=>{
-  const data={ts:new Date().toISOString()};
-  ALL_KEYS.forEach(k=>{data[k]=localStorage.getItem(k);});
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);const a=document.createElement("a");
-  a.href=url;a.download=`backup_diego_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  localStorage.setItem(SK_BKDATE,new Date().toISOString());
-};
-const doRestore=(file,onDone)=>{
-  const reader=new FileReader();
-  reader.onload=(e)=>{try{const data=JSON.parse(e.target.result);ALL_KEYS.forEach(k=>{if(data[k])localStorage.setItem(k,data[k]);});onDone();}catch{alert("Error al cargar el backup");}};
-  reader.readAsText(file);
-};
+const doBackup=()=>{const data={ts:new Date().toISOString()};ALL_KEYS.forEach(k=>{data[k]=localStorage.getItem(k);});const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`backup_diego_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);localStorage.setItem(SK_BKDATE,new Date().toISOString());};
+const doRestore=(file,onDone)=>{const r=new FileReader();r.onload=(e)=>{try{const data=JSON.parse(e.target.result);ALL_KEYS.forEach(k=>{if(data[k])localStorage.setItem(k,data[k]);});onDone();}catch{alert("Error al cargar el backup");}};r.readAsText(file);};
 const needsBackup=()=>{const l=localStorage.getItem(SK_BKDATE);if(!l)return false;return(Date.now()-new Date(l))/86400000>=2;};
 const lastBackupLabel=()=>{const l=localStorage.getItem(SK_BKDATE);if(!l)return"Nunca";const d=(Date.now()-new Date(l))/86400000;if(d<1)return"Hoy";if(d<2)return"Ayer";return`Hace ${Math.floor(d)} días`;};
 
-// ─── REORDER HELPER ──────────────────────────────────────────
-const moveItem=(arr,idx,dir)=>{const to=idx+dir;if(to<0||to>=arr.length)return arr;const a=[...arr];[a[idx],a[to]]=[a[to],a[idx]];return a;};
-
-// ─── MOVE BUTTONS ────────────────────────────────────────────
-function MoveButtons({idx,total,onMove}) {
+// ─── SHARED UI ───────────────────────────────────────────────
+function MoveBtn({idx,total,onMove}) {
   return(
     <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
-      <button onClick={()=>onMove(-1)} disabled={idx===0} style={{background:idx===0?"#F1F5F9":"#EEF4FF",border:"none",borderRadius:6,width:26,height:26,cursor:idx===0?"default":"pointer",color:idx===0?"#CBD5E1":"#1B4FD8",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
-      <button onClick={()=>onMove(1)} disabled={idx===total-1} style={{background:idx===total-1?"#F1F5F9":"#EEF4FF",border:"none",borderRadius:6,width:26,height:26,cursor:idx===total-1?"default":"pointer",color:idx===total-1?"#CBD5E1":"#1B4FD8",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
+      <button onClick={()=>onMove(-1)} disabled={idx===0} style={{background:idx===0?"#F1F5F9":"#EEF4FF",border:"none",borderRadius:6,width:26,height:26,cursor:idx===0?"default":"pointer",color:idx===0?"#CBD5E1":"#1B4FD8",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>↑</button>
+      <button onClick={()=>onMove(1)} disabled={idx===total-1} style={{background:idx===total-1?"#F1F5F9":"#EEF4FF",border:"none",borderRadius:6,width:26,height:26,cursor:idx===total-1?"default":"pointer",color:idx===total-1?"#CBD5E1":"#1B4FD8",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>↓</button>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TASK CARD — Laboral y Personal con fecha tentativa + editar
-// ═══════════════════════════════════════════════════════════════
-function TaskCard({item,items,setItems,showPerson=false}) {
+function HdrBtn({onClick,label,bg="rgba(255,255,255,0.18)"}) {
+  return <button onClick={onClick} style={{background:bg,border:"none",borderRadius:10,padding:"6px 14px",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>;
+}
+
+// ─── TASK CARD ───────────────────────────────────────────────
+function TaskCard({item,idx,items,setItems,showPerson}) {
   const [showP,setShowP]=useState(false);
-  const [customPerson,setCustomPerson]=useState("");
+  const [customP,setCustomP]=useState("");
   const [editing,setEditing]=useState(false);
-  const [editText,setEditText]=useState(item.text);
-  const [showDuePicker,setShowDuePicker]=useState(false);
-  const idx=items.findIndex(i=>i.id===item.id);
+  const [editTxt,setEditTxt]=useState(item.text);
+  const [showDue,setShowDue]=useState(false);
   const sem=getSem(item.createdAt);
   const scfg=STATUS_CFG[item.status]||STATUS_CFG.pendiente;
   const isListo=item.status==="listo";
-  const dueSem=dueDateSem(item.dueDate);
-
-  const update=(patch)=>setItems(p=>p.map(i=>i.id===item.id?{...i,...patch}:i));
-  const cycleStatus=()=>{const ci=STATUS_CYCLE.indexOf(item.status||"pendiente");update({status:STATUS_CYCLE[(ci+1)%STATUS_CYCLE.length]});};
-  const setPerson=(p)=>{update({person:p});setShowP(false);setCustomPerson("");};
-  const del=()=>setItems(p=>p.filter(i=>i.id!==item.id));
-  const saveEdit=()=>{if(editText.trim())update({text:editText.trim()});setEditing(false);};
-
+  const ds2=dueSem(item.dueDate);
+  const upd=(patch)=>setItems(p=>p.map(i=>i.id===item.id?{...i,...patch}:i));
+  const cycleStatus=()=>{const ci=STATUS_CYCLE.indexOf(item.status||"pendiente");upd({status:STATUS_CYCLE[(ci+1)%STATUS_CYCLE.length]});};
+  const setPerson=(p)=>{upd({person:p});setShowP(false);setCustomP("");};
+  const saveEdit=()=>{if(editTxt.trim())upd({text:editTxt.trim()});setEditing(false);};
   return(
     <div style={{background:isListo?"#F0FDF4":"#fff",borderRadius:14,border:isListo?"1.5px solid #BBF7D0":`1.5px solid ${sem}22`,boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:10}}>
       <div style={{display:"flex",alignItems:"flex-start",padding:"12px 14px 8px",gap:8}}>
-        <MoveButtons idx={idx} total={items.length} onMove={(d)=>setItems(p=>moveItem(p,idx,d))}/>
+        <MoveBtn idx={idx} total={items.length} onMove={(d)=>setItems(p=>moveArr(p,idx,d))}/>
         <div style={{width:9,height:9,borderRadius:"50%",background:sem,marginTop:5,flexShrink:0,boxShadow:`0 0 7px ${sem}80`}}/>
         <div style={{flex:1,minWidth:0}}>
           {editing?(
             <div style={{display:"flex",gap:6,marginBottom:6}}>
-              <input value={editText} onChange={e=>setEditText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")setEditing(false);}} autoFocus style={{flex:1,border:"1.5px solid #1B4FD8",borderRadius:8,padding:"6px 10px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
+              <input value={editTxt} onChange={e=>setEditTxt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")setEditing(false);}} autoFocus style={{flex:1,border:"1.5px solid #1B4FD8",borderRadius:8,padding:"6px 10px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
               <button onClick={saveEdit} style={{background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
               <button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"6px 10px",fontSize:11,cursor:"pointer"}}>✕</button>
             </div>
@@ -183,50 +149,132 @@ function TaskCard({item,items,setItems,showPerson=false}) {
           {item.note&&<p style={{fontSize:11,color:"#64748B",fontStyle:"italic",marginTop:3,fontWeight:300}}>{item.note}</p>}
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
             <p style={{fontSize:10,color:"#94A3B8",fontWeight:300,margin:0}}>{fmt(item.createdAt)}</p>
-            {/* Fecha tentativa badge */}
-            {item.dueDate&&dueSem&&(
-              <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:dueSem.bg,color:dueSem.color,cursor:"pointer"}} onClick={()=>setShowDuePicker(!showDuePicker)}>
-                📅 {fmtDueDate(item.dueDate)} · {dueSem.label}
-              </span>
-            )}
+            {item.dueDate&&ds2&&<span onClick={()=>setShowDue(!showDue)} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:ds2.bg,color:ds2.color,cursor:"pointer"}}>📅 {fmtDue(item.dueDate)} · {ds2.label}</span>}
           </div>
-          {/* Fecha tentativa picker */}
-          {showDuePicker&&(
-            <div style={{marginTop:6,display:"flex",gap:6,alignItems:"center"}}>
-              <input type="date" value={item.dueDate||""} onChange={e=>{update({dueDate:e.target.value});setShowDuePicker(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
-              {item.dueDate&&<button onClick={()=>{update({dueDate:null});setShowDuePicker(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,cursor:"pointer"}}>Quitar</button>}
-              <button onClick={()=>setShowDuePicker(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+          {showDue&&(
+            <div style={{display:"flex",gap:6,marginTop:6,alignItems:"center"}}>
+              <input type="date" value={item.dueDate||""} onChange={e=>{upd({dueDate:e.target.value});setShowDue(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
+              {item.dueDate&&<button onClick={()=>{upd({dueDate:null});setShowDue(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>Quitar</button>}
+              <button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
             </div>
           )}
-          {/* Persona */}
-          {showPerson&&(
-            <div style={{marginTop:6}}>
-              <button onClick={()=>setShowP(!showP)} style={{background:item.person?"#EEF4FF":"#F8FAFF",border:item.person?"none":"1.5px dashed #CBD5E1",borderRadius:8,padding:"3px 10px",fontSize:11,color:item.person?"#1B4FD8":"#94A3B8",fontWeight:600,cursor:"pointer"}}>
-                👤 {item.person||"Asignar persona"}
-              </button>
-            </div>
-          )}
+          {showPerson&&<div style={{marginTop:6}}><button onClick={()=>setShowP(!showP)} style={{background:item.person?"#EEF4FF":"#F8FAFF",border:item.person?"none":"1.5px dashed #CBD5E1",borderRadius:8,padding:"3px 10px",fontSize:11,color:item.person?"#1B4FD8":"#94A3B8",fontWeight:600,cursor:"pointer"}}>👤 {item.person||"Asignar persona"}</button></div>}
           {showPerson&&showP&&(
             <div style={{marginTop:8}}>
               <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
-                <button onClick={()=>setPerson(null)} style={{background:"#F1F5F9",color:"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:500,cursor:"pointer"}}>— Ninguna</button>
-                {PERSONS.map(p=>(<button key={p} onClick={()=>setPerson(p)} style={{background:item.person===p?"#1B4FD8":"#F1F5F9",color:item.person===p?"#fff":"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:500,cursor:"pointer"}}>{p}</button>))}
+                <button onClick={()=>setPerson(null)} style={{background:"#F1F5F9",color:"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>— Ninguna</button>
+                {PERSONS.map(p=>(<button key={p} onClick={()=>setPerson(p)} style={{background:item.person===p?"#1B4FD8":"#F1F5F9",color:item.person===p?"#fff":"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>{p}</button>))}
               </div>
               <div style={{display:"flex",gap:6}}>
-                <input value={customPerson} onChange={e=>setCustomPerson(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&customPerson.trim())setPerson(customPerson.trim());}} placeholder="Otra persona..." style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 10px",fontSize:12,fontFamily:"inherit",outline:"none",color:"#0F172A"}}/>
-                <button onClick={()=>{if(customPerson.trim())setPerson(customPerson.trim());}} style={{background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>OK</button>
+                <input value={customP} onChange={e=>setCustomP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&customP.trim())setPerson(customP.trim());}} placeholder="Otra persona..." style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 10px",fontSize:12,fontFamily:"inherit",outline:"none",color:"#0F172A"}}/>
+                <button onClick={()=>{if(customP.trim())setPerson(customP.trim());}} style={{background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>OK</button>
               </div>
             </div>
           )}
         </div>
       </div>
-      {/* Acciones */}
-      <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.04)",background:isListo?"rgba(240,253,244,0.9)":"rgba(248,250,255,0.9)"}}>
-        <button onClick={cycleStatus} style={{flex:1,border:"none",background:"none",padding:"8px 0",fontSize:11,fontWeight:700,cursor:"pointer",color:scfg.color,borderRight:"1px solid rgba(0,0,0,0.04)"}}>● {scfg.label}</button>
-        {!item.dueDate&&<button onClick={()=>setShowDuePicker(!showDuePicker)} style={{border:"none",background:"none",padding:"8px 10px",fontSize:11,fontWeight:600,cursor:"pointer",color:"#64748B",borderRight:"1px solid rgba(0,0,0,0.04)"}}>📅</button>}
-        <button onClick={()=>{setEditing(true);setEditText(item.text);}} style={{border:"none",background:"none",padding:"8px 10px",fontSize:11,fontWeight:600,cursor:"pointer",color:"#64748B",borderRight:"1px solid rgba(0,0,0,0.04)"}}>✏️</button>
-        <button onClick={del} style={{border:"none",background:"none",padding:"8px 14px",fontSize:11,fontWeight:700,cursor:"pointer",color:isListo?"#16A34A":"#EF4444"}}>{isListo?"✓ Borrar":"✕"}</button>
+      <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.04)",background:"rgba(248,250,255,0.9)"}}>
+        <button onClick={cycleStatus} style={{flex:1,border:"none",background:"none",padding:"9px 0",fontSize:11,fontWeight:700,cursor:"pointer",color:scfg.color,borderRight:"1px solid rgba(0,0,0,0.04)"}}>● {scfg.label}</button>
+        {!item.dueDate&&<button onClick={()=>setShowDue(true)} style={{border:"none",background:"none",padding:"9px 10px",fontSize:11,cursor:"pointer",color:"#64748B",borderRight:"1px solid rgba(0,0,0,0.04)"}}>📅</button>}
+        <button onClick={()=>{setEditing(true);setEditTxt(item.text);}} style={{border:"none",background:"none",padding:"9px 10px",fontSize:11,cursor:"pointer",color:"#64748B",borderRight:"1px solid rgba(0,0,0,0.04)"}}>✏️</button>
+        <button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{border:"none",background:"none",padding:"9px 14px",fontSize:11,fontWeight:700,cursor:"pointer",color:isListo?"#16A34A":"#EF4444"}}>{isListo?"✓ Borrar":"✕"}</button>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ⚡ BASURERO
+// ═══════════════════════════════════════════════════════════════
+function Basurero({onMoved,onBackup}) {
+  const [items,setItems]=useState(()=>load(SK_TASKS));
+  const [text,setText]=useState("");
+  const [note,setNote]=useState("");
+  const [cat,setCat]=useState("sin");
+  const [showNote,setShowNote]=useState(false);
+  const [flash,setFlash]=useState(null);
+  const inputRef=useRef(null);
+
+  useEffect(()=>save(SK_TASKS,items),[items]);
+
+  const add=()=>{
+    if(!text.trim())return;
+    const item={id:Date.now().toString(),text:text.trim(),note:note.trim(),cat,createdAt:new Date().toISOString()};
+    setItems(p=>[item,...p]);
+    setFlash(item.id);setTimeout(()=>setFlash(null),500);
+    setText("");setNote("");setCat("sin");setShowNote(false);
+    inputRef.current?.focus();
+  };
+
+  const moveToList=(item)=>{
+    // 1. Remove from basurero immediately
+    const newItems=items.filter(i=>i.id!==item.id);
+    setItems(newItems);
+    save(SK_TASKS,newItems);
+    // 2. Add to destination only if not already there
+    const destKey=item.cat==="laboral"?SK_LABORAL:SK_PERSONAL;
+    const existing=load(destKey);
+    if(!existing.some(e=>e.id===item.id)){
+      const newItem={id:item.id,text:item.text,note:item.note,cat:item.cat==="sin"?"personal":item.cat,createdAt:item.createdAt,status:"pendiente",person:null,dueDate:null};
+      save(destKey,[...existing,newItem]);
+    }
+    // 3. Navigate
+    onMoved(item.cat==="laboral"?"laboral":"personal");
+  };
+
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>⚡</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Basurero</span></div>
+            <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300,marginBottom:12}}>Captura rápida · sin pensar</p>
+            <div style={{background:"rgba(255,255,255,0.14)",borderRadius:10,padding:"5px 14px",display:"inline-block"}}><span style={{color:"#fff",fontSize:12,fontWeight:500}}>{items.length} pendiente{items.length!==1?"s":""}</span></div>
+          </div>
+          <HdrBtn onClick={onBackup} label="💾 Backup"/>
+        </div>
+      </div>
+      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:10}}>
+        <div style={{background:"#fff",borderRadius:18,boxShadow:"0 8px 32px rgba(27,79,216,0.12)",border:"1.5px solid rgba(27,79,216,0.07)",overflow:"hidden"}}>
+          <textarea ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();add();}}} placeholder="¿Qué tienes en mente? Enter para guardar..." rows={3} style={{width:"100%",border:"none",padding:"16px 16px 8px",fontSize:15,resize:"none",background:"transparent",color:"#0F172A",lineHeight:1.5,fontFamily:"inherit"}}/>
+          <div style={{display:"flex",gap:8,padding:"4px 14px 10px"}}>
+            {CATS.map(c=>(<button key={c.id} onClick={()=>setCat(c.id)} style={{flex:1,border:"none",borderRadius:10,padding:"7px 4px",fontSize:11,fontWeight:600,cursor:"pointer",background:cat===c.id?c.bg:"#F8FAFF",color:cat===c.id?c.color:"#94A3B8",outline:cat===c.id?`2px solid ${c.color}`:"2px solid transparent"}}>{c.dot} {c.label}</button>))}
+          </div>
+          {showNote&&<div style={{padding:"0 14px 8px"}}><textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Contexto adicional..." rows={2} style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"8px 12px",fontSize:12,resize:"none",background:"#F8FAFF",color:"#475569",fontFamily:"inherit"}}/></div>}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 14px 14px"}}>
+            <button onClick={()=>setShowNote(!showNote)} style={{background:"none",border:"none",cursor:"pointer",color:showNote?"#1B4FD8":"#94A3B8",fontSize:12,fontWeight:500}}>📝 {showNote?"Ocultar":"+ Nota"}</button>
+            <button onClick={add} disabled={!text.trim()} style={{background:text.trim()?"linear-gradient(135deg,#1B4FD8,#2563EB)":"#E2E8F0",color:text.trim()?"#fff":"#94A3B8",border:"none",borderRadius:12,padding:"10px 22px",fontSize:13,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed"}}>Guardar ↵</button>
+          </div>
+        </div>
+      </div>
+      <div style={{padding:"16px 16px 0"}}>
+        {items.length===0?(<div style={{textAlign:"center",padding:"40px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>⚡</div><p style={{fontSize:15,fontWeight:500}}>Tu basurero está vacío</p></div>):(
+          items.map((item,idx)=>{
+            const sem=getSem(item.createdAt);const ci=CATS.find(c=>c.id===item.cat)||CATS[2];const isNew=flash===item.id;
+            const ml=item.cat==="laboral"?{text:"🔵 → Laboral",color:"#1B4FD8"}:{text:"🟣 → Personal",color:"#7C3AED"};
+            return(
+              <div key={item.id} style={{background:"#fff",borderRadius:14,border:"1.5px solid rgba(27,79,216,0.07)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",transform:isNew?"scale(1.01)":"scale(1)",transition:"transform 0.2s",overflow:"hidden",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"flex-start",padding:"12px 14px 8px",gap:8}}>
+                  <MoveBtn idx={idx} total={items.length} onMove={(d)=>setItems(p=>moveArr(p,idx,d))}/>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:sem,marginTop:6,flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:6,background:ci.bg,color:ci.color,display:"inline-block",marginBottom:4}}>{ci.dot} {ci.label}</span>
+                    <p style={{fontSize:14,fontWeight:500,color:"#0F172A",lineHeight:1.45,wordBreak:"break-word",margin:0}}>{item.text}</p>
+                    {item.note&&<p style={{fontSize:11,color:"#64748B",fontStyle:"italic",marginTop:3,fontWeight:300}}>{item.note}</p>}
+                    <p style={{fontSize:10,color:"#94A3B8",marginTop:5,fontWeight:300}}>{fmt(item.createdAt)}</p>
+                  </div>
+                </div>
+                <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.04)",background:"rgba(248,250,255,0.9)"}}>
+                  <button onClick={()=>moveToList(item)} style={{flex:1,border:"none",background:"none",padding:"9px 0",fontSize:11,fontWeight:700,cursor:"pointer",color:ml.color,borderRight:"1px solid rgba(0,0,0,0.04)"}}>{ml.text}</button>
+                  <button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{border:"none",background:"none",padding:"9px 18px",fontSize:11,fontWeight:600,cursor:"pointer",color:"#EF4444"}}>✕</button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      {items.length>0&&<div style={{display:"flex",gap:16,padding:"16px 0 0",justifyContent:"center"}}>{[["#22C55E","< 3 días"],["#F59E0B","3–7 días"],["#EF4444","+7 días"]].map(([c,l])=>(<div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:"50%",background:c}}/><span style={{fontSize:10,color:"#94A3B8"}}>{l}</span></div>))}</div>}
     </div>
   );
 }
@@ -235,43 +283,41 @@ function TaskCard({item,items,setItems,showPerson=false}) {
 // 🔵 LABORAL
 // ═══════════════════════════════════════════════════════════════
 function Laboral({onBackup}) {
-  const [items,setItems]=useState(()=>{try{return JSON.parse(localStorage.getItem(SK_LABORAL))||[];}catch{return [];}});
+  const [items,setItems]=useState(()=>load(SK_LABORAL));
   const [filter,setFilter]=useState("todos");
   const [view,setView]=useState("lista");
-  useEffect(()=>{try{localStorage.setItem(SK_LABORAL,JSON.stringify(items));}catch{}},[items]);
+  useEffect(()=>save(SK_LABORAL,items),[items]);
   const filtered=items.filter(i=>filter==="todos"||i.status===filter);
   const counts={todos:items.length,pendiente:items.filter(i=>i.status==="pendiente").length,en_proceso:items.filter(i=>i.status==="en_proceso").length,esperando:items.filter(i=>i.status==="esperando").length};
   const byPerson=()=>{const g={};items.forEach(i=>{const k=i.person||"Sin asignar";if(!g[k])g[k]=[];g[k].push(i);});return g;};
-  const FILTERS=[{id:"todos",label:`Todos (${counts.todos})`},{id:"pendiente",label:`Pendiente (${counts.pendiente})`},{id:"en_proceso",label:`En proceso (${counts.en_proceso})`},{id:"esperando",label:`Esperando (${counts.esperando})`}];
   return(
-    <div style={{paddingBottom:20}}>
+    <div style={{padding:"0 0 20px"}}>
       <div style={{background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:4}}>
-          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🔵</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Laboral</span></div>
-          <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300,marginBottom:0}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🔵</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Laboral</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300,marginBottom:0}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
           <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-            <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
-            <button onClick={()=>setView(v=>v==="lista"?"persona":"lista")} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>{view==="lista"?"👥 Persona":"📋 Lista"}</button>
+            <HdrBtn onClick={onBackup} label="💾 Backup"/>
+            <HdrBtn onClick={()=>setView(v=>v==="lista"?"persona":"lista")} label={view==="lista"?"👥 Persona":"📋 Lista"}/>
           </div>
         </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
-          {FILTERS.map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.label}</button>))}
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:12}}>
+          {[{id:"todos",l:`Todos (${counts.todos})`},{id:"pendiente",l:`Pendiente`},{id:"en_proceso",l:`En proceso`},{id:"esperando",l:`Esperando`}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.l}</button>))}
         </div>
       </div>
       <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:5}}>
-        {items.length===0?(<div style={{background:"#fff",borderRadius:16,boxShadow:"0 4px 20px rgba(27,79,216,0.08)",padding:"48px 20px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:40,marginBottom:10}}>🔵</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas laborales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>):
+        {items.length===0?(<div style={{background:"#fff",borderRadius:16,padding:"48px 20px",textAlign:"center",color:"#94A3B8",boxShadow:"0 4px 20px rgba(27,79,216,0.08)"}}><div style={{fontSize:40,marginBottom:10}}>🔵</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas laborales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>):
         view==="lista"?(
           filtered.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p>Sin tareas con ese filtro</p></div>):
-          filtered.map(item=><TaskCard key={item.id} item={item} items={items} setItems={setItems} showPerson={true}/>)
+          filtered.map((item,idx)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true}/>)
         ):(
           Object.entries(byPerson()).sort(([a],[b])=>a==="Sin asignar"?1:b==="Sin asignar"?-1:a.localeCompare(b)).map(([person,tasks])=>(
             <div key={person} style={{marginBottom:20}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#1B4FD8,#2563EB)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700}}>{person==="Sin asignar"?"?":person.charAt(0).toUpperCase()}</div>
+                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#1B4FD8,#2563EB)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700}}>{person==="Sin asignar"?"?":person.charAt(0)}</div>
                 <div><p style={{fontSize:13,fontWeight:700,color:"#0F172A",margin:0}}>{person}</p><p style={{fontSize:10,color:"#94A3B8",margin:0}}>{tasks.length} tarea{tasks.length!==1?"s":""}</p></div>
               </div>
-              {tasks.map(item=><TaskCard key={item.id} item={item} items={items} setItems={setItems} showPerson={true}/>)}
+              {tasks.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true}/>)}
             </div>
           ))
         )}
@@ -284,476 +330,336 @@ function Laboral({onBackup}) {
 // 🟣 PERSONAL
 // ═══════════════════════════════════════════════════════════════
 function Personal({onBackup}) {
-  const [items,setItems]=useState(()=>{try{return JSON.parse(localStorage.getItem(SK_PERSONAL))||[];}catch{return [];}});
+  const [items,setItems]=useState(()=>load(SK_PERSONAL));
   const [filter,setFilter]=useState("todos");
-  useEffect(()=>{try{localStorage.setItem(SK_PERSONAL,JSON.stringify(items));}catch{}},[items]);
+  useEffect(()=>save(SK_PERSONAL,items),[items]);
   const filtered=items.filter(i=>filter==="todos"||i.status===filter);
   const counts={todos:items.length,pendiente:items.filter(i=>i.status==="pendiente").length,en_proceso:items.filter(i=>i.status==="en_proceso").length,esperando:items.filter(i=>i.status==="esperando").length};
   return(
-    <div style={{paddingBottom:20}}>
+    <div style={{padding:"0 0 20px"}}>
       <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:4}}>
-          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🟣</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Personal</span></div>
-          <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
-          <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🟣</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Personal</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
+          <HdrBtn onClick={onBackup} label="💾 Backup"/>
         </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
-          {[{id:"todos",label:`Todos (${counts.todos})`},{id:"pendiente",label:"Pendiente"},{id:"en_proceso",label:"En proceso"},{id:"esperando",label:"Esperando"}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.label}</button>))}
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:12}}>
+          {[{id:"todos",l:`Todos (${counts.todos})`},{id:"pendiente",l:"Pendiente"},{id:"en_proceso",l:"En proceso"},{id:"esperando",l:"Esperando"}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.l}</button>))}
         </div>
       </div>
       <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:5}}>
         {items.length===0?(<div style={{background:"#fff",borderRadius:16,padding:"48px 20px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:40,marginBottom:10}}>🟣</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas personales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>):
         filtered.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p>Sin tareas con ese filtro</p></div>):
-        filtered.map(item=><TaskCard key={item.id} item={item} items={items} setItems={setItems} showPerson={false}/>)}
+        filtered.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={false}/>)}
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ⚡ BASURERO — bug fix: valida duplicados al mover
-// ═══════════════════════════════════════════════════════════════
-function Basurero({onMoved,onBackup}) {
-  const [items,setItems]=useState(()=>{try{return JSON.parse(localStorage.getItem(SK_TASKS))||[];}catch{return [];}});
-  const [text,setText]=useState("");const [note,setNote]=useState("");const [cat,setCat]=useState("sin");
-  const [showNote,setShowNote]=useState(false);const [justAdded,setJustAdded]=useState(null);
-  const inputRef=useRef(null);
-  useEffect(()=>{try{localStorage.setItem(SK_TASKS,JSON.stringify(items));}catch{}},[items]);
-
-  const add=()=>{
-    if(!text.trim())return;
-    const item={id:Date.now().toString(),text:text.trim(),note:note.trim(),cat,createdAt:new Date().toISOString(),ready:false};
-    setItems(p=>[item,...p]);setJustAdded(item.id);setTimeout(()=>setJustAdded(null),500);
-    setText("");setNote("");setCat("sin");setShowNote(false);inputRef.current?.focus();
-  };
-
-  const moveToList=(item)=>{
-    const targetKey=item.cat==="laboral"?SK_LABORAL:SK_PERSONAL;
-    try{
-      const existing=JSON.parse(localStorage.getItem(targetKey))||[];
-      // Validate: don't duplicate by ID
-      if(existing.some(e=>e.id===item.id)){
-        setItems(p=>p.filter(i=>i.id!==item.id));
-        if(onMoved) onMoved(item.cat==="laboral"?"laboral":"personal");
-        return;
-      }
-      const newItem={id:item.id,text:item.text,note:item.note,cat:item.cat==="sin"?"personal":item.cat,createdAt:item.createdAt,status:"pendiente",person:null,dueDate:null};
-      localStorage.setItem(targetKey,JSON.stringify([...existing,newItem]));
-    }catch(e){}
-    setItems(p=>p.filter(i=>i.id!==item.id));
-    if(onMoved) onMoved(item.cat==="laboral"?"laboral":"personal");
-  };
-
-  const move=(idx,dir)=>setItems(p=>moveItem(p,idx,dir));
-  const del=(id)=>setItems(p=>p.filter(i=>i.id!==id));
-  const pending=items.length;
-
-  const moveLabel=(item)=>{
-    if(item.cat==="laboral") return{text:"🔵 → Laboral",color:"#1B4FD8"};
-    return{text:"🟣 → Personal",color:"#7C3AED"};
-  };
-
-  return(
-    <div style={{paddingBottom:20}}>
-      <div style={{background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>⚡</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Basurero</span></div>
-          <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300,marginBottom:14}}>Captura rápida · sin pensar</p>
-          <div style={{background:"rgba(255,255,255,0.14)",borderRadius:10,padding:"5px 14px",display:"inline-block"}}>
-            <span style={{color:"#fff",fontSize:12,fontWeight:500}}>{pending} pendiente{pending!==1?"s":""}</span>
-          </div></div>
-          <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
-        </div>
-      </div>
-      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:10}}>
-        <div style={{background:"#fff",borderRadius:18,boxShadow:"0 8px 32px rgba(27,79,216,0.12)",border:"1.5px solid rgba(27,79,216,0.07)",overflow:"hidden"}}>
-          <textarea ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();add();}}} placeholder="¿Qué tienes en mente? Enter para guardar..." rows={3} style={{width:"100%",border:"none",padding:"16px 16px 8px",fontSize:15,resize:"none",background:"transparent",color:"#0F172A",lineHeight:1.5,fontFamily:"inherit"}}/>
-          <div style={{display:"flex",gap:8,padding:"4px 14px 10px"}}>
-            {CATS.map(c=>(<button key={c.id} onClick={()=>setCat(c.id)} style={{flex:1,border:"none",borderRadius:10,padding:"7px 4px",fontSize:11,fontWeight:600,cursor:"pointer",background:cat===c.id?c.bg:"#F8FAFF",color:cat===c.id?c.color:"#94A3B8",outline:cat===c.id?`2px solid ${c.color}`:"2px solid transparent"}}>{c.dot} {c.label}</button>))}
-          </div>
-          {showNote&&<div style={{padding:"0 14px 8px"}}><textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Contexto adicional..." rows={2} style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"8px 12px",fontSize:12,resize:"none",background:"#F8FAFF",color:"#475569",fontFamily:"inherit"}}/></div>}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 14px 14px"}}>
-            <button onClick={()=>setShowNote(!showNote)} style={{background:"none",border:"none",cursor:"pointer",color:showNote?"#1B4FD8":"#94A3B8",fontSize:12,fontWeight:500}}>📝 {showNote?"Ocultar":"+ Nota"}</button>
-            <button onClick={add} disabled={!text.trim()} style={{background:text.trim()?"linear-gradient(135deg,#1B4FD8,#2563EB)":"#E2E8F0",color:text.trim()?"#fff":"#94A3B8",border:"none",borderRadius:12,padding:"10px 22px",fontSize:13,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed",boxShadow:text.trim()?"0 4px 12px rgba(27,79,216,0.28)":"none"}}>Guardar ↵</button>
-          </div>
-        </div>
-      </div>
-      <div style={{padding:"16px 16px 0"}}>
-        {items.length===0?(<div style={{textAlign:"center",padding:"52px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>⚡</div><p style={{fontSize:15,fontWeight:500}}>Tu basurero está vacío</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Escribe arriba todo lo que tienes en mente</p></div>):(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {items.map((item,idx)=>{
-              const sem=getSem(item.createdAt);const catInfo=CATS.find(c=>c.id===item.cat)||CATS[2];const isNew=justAdded===item.id;const ml=moveLabel(item);
-              return(
-                <div key={item.id} style={{background:"#fff",borderRadius:14,border:"1.5px solid rgba(27,79,216,0.07)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",transform:isNew?"scale(1.01)":"scale(1)",transition:"all 0.22s ease",overflow:"hidden"}}>
-                  <div style={{display:"flex",alignItems:"flex-start",padding:"12px 14px 8px",gap:8}}>
-                    <MoveButtons idx={idx} total={items.length} onMove={(d)=>move(idx,d)}/>
-                    <div style={{width:8,height:8,borderRadius:"50%",background:sem,marginTop:6,flexShrink:0,boxShadow:`0 0 6px ${sem}80`}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:6,background:catInfo.bg,color:catInfo.color,display:"inline-block",marginBottom:4}}>{catInfo.dot} {catInfo.label}</span>
-                      <p style={{fontSize:14,fontWeight:500,color:"#0F172A",lineHeight:1.45,wordBreak:"break-word",margin:0}}>{item.text}</p>
-                      {item.note&&<p style={{fontSize:11,color:"#64748B",fontStyle:"italic",marginTop:3,fontWeight:300}}>{item.note}</p>}
-                      <p style={{fontSize:10,color:"#94A3B8",marginTop:5,fontWeight:300}}>{fmt(item.createdAt)}</p>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.04)",background:"rgba(248,250,255,0.9)"}}>
-                    <button onClick={()=>moveToList(item)} style={{flex:1,border:"none",background:"none",padding:"9px 0",fontSize:11,fontWeight:700,cursor:"pointer",color:ml.color,borderRight:"1px solid rgba(0,0,0,0.04)"}}>{ml.text}</button>
-                    <button onClick={()=>del(item.id)} style={{border:"none",background:"none",padding:"9px 18px",fontSize:11,fontWeight:600,cursor:"pointer",color:"#EF4444"}}>✕</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      {items.length>0&&<div style={{display:"flex",gap:16,padding:"20px 16px 0",justifyContent:"center"}}>{[["#22C55E","< 3 días"],["#F59E0B","3–7 días"],["#EF4444","+7 días"]].map(([c,l])=>(<div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:"50%",background:c}}/><span style={{fontSize:10,color:"#94A3B8"}}>{l}</span></div>))}</div>}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 🏋️ HÁBITOS — con ↑↓ y editar
+// 🏋️ HÁBITOS
 // ═══════════════════════════════════════════════════════════════
 function Habitos({onBackup}) {
-  const [habits,setHabits]=useState(()=>{try{const s=JSON.parse(localStorage.getItem(SK_HABITS));return s&&s.length>0?s:INITIAL_HABITS;}catch{return INITIAL_HABITS;}});
-  const [logs,setLogs]=useState(()=>{try{return JSON.parse(localStorage.getItem(SK_LOGS))||{};}catch{return {};}});
-  const [view,setView]=useState("today");const [offset,setOffset]=useState(0);
+  const [habits,setHabits]=useState(()=>{const s=load(SK_HABITS);return s.length>0?s:INITIAL_HABITS;});
+  const [logs,setLogs]=useState(()=>loadObj(SK_LOGS));
+  const [view,setView]=useState("today");
+  const [offset,setOffset]=useState(0);
   const [showForm,setShowForm]=useState(false);
-  const [editHabit,setEditHabit]=useState(null); // habit being edited
-  const [newName,setNewName]=useState("");const [newType,setNewType]=useState("simple");const [newDays,setNewDays]=useState([0,1,2,3,4,5,6]);
-  useEffect(()=>{try{localStorage.setItem(SK_HABITS,JSON.stringify(habits));}catch{}},[habits]);
+  const [editH,setEditH]=useState(null);
+  const [nName,setNName]=useState("");const [nType,setNType]=useState("simple");const [nDays,setNDays]=useState([0,1,2,3,4,5,6]);
+  useEffect(()=>save(SK_HABITS,habits),[habits]);
   useEffect(()=>{try{localStorage.setItem(SK_LOGS,JSON.stringify(logs));}catch{}},[logs]);
-
-  const selDate=()=>{const d=new Date();d.setDate(d.getDate()+offset);return d;};
-  const sd=selDate();const selDow=sd.getDay();const selKey=dateStr(sd);const isToday=offset===0;
-  const selLabel=()=>{if(offset===0)return"Hoy";if(offset===-1)return"Ayer";return`${DAYS_FULL[selDow]} ${sd.getDate()} ${MONTHS_FULL[sd.getMonth()+1].slice(0,3)}`;};
+  const sd=()=>{const d=new Date();d.setDate(d.getDate()+offset);return d;};
+  const sel=sd();const selDow=sel.getDay();const selKey=ds(sel);const isToday=offset===0;
+  const selLbl=()=>{if(offset===0)return"Hoy";if(offset===-1)return"Ayer";return`${DAYS_FULL[selDow]} ${sel.getDate()} ${MONTHS_FULL[sel.getMonth()+1].slice(0,3)}`;};
+  const lk=(hid,slot=null)=>slot?`${selKey}_${hid}_${slot}`:`${selKey}_${hid}`;
+  const cycleLog=(hid,slot=null)=>{const k=lk(hid,slot);setLogs(p=>{const cur=p[k];const next=cur==null?"done":cur==="done"?"skip":null;const u={...p};if(next==null)delete u[k];else u[k]=next;return u;});};
+  const streak=(h)=>{let s=0;let d=new Date();d.setDate(d.getDate()-1);for(let i=0;i<90;i++){const dow=d.getDay();if(h.days.includes(dow)){if(h.type==="timed"){const aD=h.slots.every(sl=>logs[`${ds(d)}_${h.id}_${sl}`]==="done");const aS=h.slots.some(sl=>logs[`${ds(d)}_${h.id}_${sl}`]==="skip");if(aD)s++;else if(aS)break;}else{const v=logs[`${ds(d)}_${h.id}`];if(v==="done")s++;else if(v==="skip")break;}}d.setDate(d.getDate()-1);}return s;};
+  const pct=(h)=>{const now=new Date();let done=0,total=0;for(let day=1;day<=now.getDate();day++){const d=new Date(now.getFullYear(),now.getMonth(),day);if(!h.days.includes(d.getDay()))continue;total++;if(h.type==="timed"){if(h.slots.every(s=>logs[`${ds(d)}_${h.id}_${s}`]==="done"))done++;}else{if(logs[`${ds(d)}_${h.id}`]==="done")done++;}}return total===0?null:Math.round((done/total)*100);};
+  const openAdd=()=>{setEditH(null);setNName("");setNType("simple");setNDays([0,1,2,3,4,5,6]);setShowForm(true);};
+  const openEdit=(h)=>{setEditH(h);setNName(h.name);setNType(h.type);setNDays([...h.days]);setShowForm(true);};
+  const saveH=()=>{if(!nName.trim())return;if(editH){setHabits(p=>p.map(h=>h.id===editH.id?{...h,name:nName.trim(),type:nType,days:nDays,...(nType==="timed"&&!h.slots?{slots:["Mañana","Tarde","Noche"]}:{})}:h));}else{setHabits(p=>[...p,{id:Date.now().toString(),name:nName.trim(),type:nType,days:nDays,...(nType==="timed"?{slots:["Mañana","Tarde","Noche"]}:{})}]);}setShowForm(false);setEditH(null);};
   const habitsForDay=habits.filter(h=>h.days.includes(selDow));
-  const logKey=(hid,slot=null)=>slot?`${selKey}_${hid}_${slot}`:`${selKey}_${hid}`;
-  const cycleLog=(hid,slot=null)=>{const key=logKey(hid,slot);setLogs(prev=>{const cur=prev[key];const next=cur===undefined||cur===null?"done":cur==="done"?"skip":null;const u={...prev};if(next===null)delete u[key];else u[key]=next;return u;});};
-  const getStreak=(habit)=>{let s=0;let d=new Date();d.setDate(d.getDate()-1);for(let i=0;i<90;i++){const dow=d.getDay();if(habit.days.includes(dow)){if(habit.type==="timed"){const aD=habit.slots.every(sl=>logs[`${dateStr(d)}_${habit.id}_${sl}`]==="done");const aS=habit.slots.some(sl=>logs[`${dateStr(d)}_${habit.id}_${sl}`]==="skip");if(aD)s++;else if(aS)break;}else{const v=logs[`${dateStr(d)}_${habit.id}`];if(v==="done")s++;else if(v==="skip")break;}}d.setDate(d.getDate()-1);}return s;};
-  const getMonthPct=(habit)=>{const now=new Date();let done=0,total=0;for(let day=1;day<=now.getDate();day++){const d=new Date(now.getFullYear(),now.getMonth(),day);if(!habit.days.includes(d.getDay()))continue;total++;if(habit.type==="timed"){if(habit.slots.every(s=>logs[`${dateStr(d)}_${habit.id}_${s}`]==="done"))done++;}else{if(logs[`${dateStr(d)}_${habit.id}`]==="done")done++;}}return total===0?null:Math.round((done/total)*100);};
-
-  const toggleDay=(d)=>setNewDays(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d]);
-
-  const openAdd=()=>{setEditHabit(null);setNewName("");setNewType("simple");setNewDays([0,1,2,3,4,5,6]);setShowForm(true);};
-  const openEdit=(h)=>{setEditHabit(h);setNewName(h.name);setNewType(h.type);setNewDays([...h.days]);setShowForm(true);};
-
-  const saveHabit=()=>{
-    if(!newName.trim())return;
-    if(editHabit){
-      setHabits(p=>p.map(h=>h.id===editHabit.id?{...h,name:newName.trim(),type:newType,days:newDays,...(newType==="timed"?{slots:h.slots||["Mañana","Tarde","Noche"]}:{})}:h));
-    }else{
-      const h={id:Date.now().toString(),name:newName.trim(),type:newType,days:newDays,...(newType==="timed"?{slots:["Mañana","Tarde","Noche"]}:{})};
-      setHabits(p=>[...p,h]);
-    }
-    setShowForm(false);setEditHabit(null);
-  };
-
-  const delHabit=(id)=>setHabits(p=>p.filter(h=>h.id!==id));
-
-  const ViewToday=()=>(
-    <div style={{padding:"16px 16px 0"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,background:"#fff",borderRadius:14,padding:"10px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",border:"1.5px solid rgba(5,150,105,0.08)"}}>
-        <button onClick={()=>setOffset(o=>o-1)} style={{background:"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:"pointer",color:"#059669",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>←</button>
-        <div style={{textAlign:"center"}}><p style={{fontSize:14,fontWeight:700,color:"#0F172A",margin:0}}>{selLabel()}</p><p style={{fontSize:11,color:"#94A3B8",margin:0}}>{sd.toLocaleDateString("es-CO",{day:"numeric",month:"long"})}</p></div>
-        <button onClick={()=>setOffset(o=>Math.min(0,o+1))} disabled={isToday} style={{background:isToday?"#F1F5F9":"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:isToday?"default":"pointer",color:isToday?"#CBD5E1":"#059669",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>→</button>
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#059669,#10B981)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🏋️</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Hábitos</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})}</p></div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+            <HdrBtn onClick={onBackup} label="💾 Backup"/>
+            <HdrBtn onClick={openAdd} label="+ Hábito"/>
+          </div>
+        </div>
+        <div style={{display:"flex",marginTop:14,background:"rgba(0,0,0,0.15)",borderRadius:10,padding:3,width:"fit-content"}}>
+          {[["today","📅 Días"],["month","📊 Mes"]].map(([v,l])=>(<button key={v} onClick={()=>setView(v)} style={{border:"none",borderRadius:8,padding:"6px 18px",fontSize:12,fontWeight:600,cursor:"pointer",background:view===v?"white":"transparent",color:view===v?"#059669":"rgba(255,255,255,0.7)"}}>{l}</button>))}
+        </div>
       </div>
-      {habitsForDay.length===0?(<div style={{textAlign:"center",padding:"40px",color:"#94A3B8"}}><p style={{fontSize:15,fontWeight:500}}>No hay hábitos para este día</p></div>):(
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {habitsForDay.map((habit,hIdx)=>{
-            const allIdxInHabits=habits.findIndex(h=>h.id===habit.id);
-            const streak=getStreak(habit);const pct=getMonthPct(habit);
-            return(
-              <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(16,185,129,0.1)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px 8px",gap:8}}>
-                  <MoveButtons idx={allIdxInHabits} total={habits.length} onMove={(d)=>setHabits(p=>moveItem(p,allIdxInHabits,d))}/>
-                  <div style={{flex:1}}><p style={{fontSize:15,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p><div style={{display:"flex",gap:10,marginTop:3}}>{streak>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:600}}>🔥 {streak}d</span>}{pct!==null&&<span style={{fontSize:11,color:"#64748B"}}>{pct}% mes</span>}</div></div>
-                  <div style={{display:"flex",gap:4}}>
-                    <button onClick={()=>openEdit(habit)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer",color:"#64748B"}}>✏️</button>
-                    {isToday&&<button onClick={()=>delHabit(habit.id)} style={{background:"none",border:"none",color:"#E2E8F0",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>}
+      {showForm&&(
+        <div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}>
+          <div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(5,150,105,0.15)",border:"1.5px solid rgba(5,150,105,0.15)",padding:16}}>
+            <p style={{fontSize:13,fontWeight:600,color:"#059669",marginBottom:12}}>{editH?"Editar hábito":"Nuevo hábito"}</p>
+            <input value={nName} onChange={e=>setNName(e.target.value)} placeholder="Nombre del hábito" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>{[["simple","Simple ✅"],["timed","Por horario 🕐"]].map(([v,l])=>(<button key={v} onClick={()=>setNType(v)} style={{flex:1,border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",background:nType===v?"#ECFDF5":"#F8FAFF",color:nType===v?"#059669":"#94A3B8",outline:nType===v?"2px solid #059669":"2px solid transparent"}}>{l}</button>))}</div>
+            <p style={{fontSize:11,color:"#64748B",fontWeight:600,marginBottom:6}}>Días:</p>
+            <div style={{display:"flex",gap:5,marginBottom:14}}>{["D","L","M","M","J","V","S"].map((d,i)=>(<button key={i} onClick={()=>setNDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{flex:1,border:"none",borderRadius:8,padding:"7px 0",fontSize:11,fontWeight:700,cursor:"pointer",background:nDays.includes(i)?"#059669":"#F1F5F9",color:nDays.includes(i)?"white":"#94A3B8"}}>{d}</button>))}</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setShowForm(false);setEditH(null);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button>
+              <button onClick={saveH} disabled={!nName.trim()} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:nName.trim()?"linear-gradient(135deg,#059669,#10B981)":"#E2E8F0",color:nName.trim()?"#fff":"#94A3B8"}}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {view==="today"?(
+        <div style={{padding:"16px 16px 0"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,background:"#fff",borderRadius:14,padding:"10px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",border:"1.5px solid rgba(5,150,105,0.08)"}}>
+            <button onClick={()=>setOffset(o=>o-1)} style={{background:"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:"pointer",color:"#059669",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>←</button>
+            <div style={{textAlign:"center"}}><p style={{fontSize:14,fontWeight:700,color:"#0F172A",margin:0}}>{selLbl()}</p><p style={{fontSize:11,color:"#94A3B8",margin:0}}>{sel.toLocaleDateString("es-CO",{day:"numeric",month:"long"})}</p></div>
+            <button onClick={()=>setOffset(o=>Math.min(0,o+1))} disabled={isToday} style={{background:isToday?"#F1F5F9":"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:isToday?"default":"pointer",color:isToday?"#CBD5E1":"#059669",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>→</button>
+          </div>
+          {habitsForDay.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p style={{fontSize:14}}>No hay hábitos para este día</p></div>):(
+            habitsForDay.map((habit)=>{
+              const hi=habits.findIndex(h=>h.id===habit.id);
+              const str=streak(habit);const p=pct(habit);
+              return(
+                <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(16,185,129,0.1)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",padding:"12px 14px 8px",gap:8}}>
+                    <MoveBtn idx={hi} total={habits.length} onMove={(d)=>setHabits(p=>moveArr(p,hi,d))}/>
+                    <div style={{flex:1}}><p style={{fontSize:15,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p><div style={{display:"flex",gap:10,marginTop:2}}>{str>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:600}}>🔥 {str}d</span>}{p!==null&&<span style={{fontSize:11,color:"#64748B"}}>{p}% mes</span>}</div></div>
+                    <div style={{display:"flex",gap:4}}>
+                      <button onClick={()=>openEdit(habit)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 8px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
+                      {isToday&&<button onClick={()=>setHabits(p=>p.filter(h=>h.id!==habit.id))} style={{background:"none",border:"none",color:"#E2E8F0",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>}
+                    </div>
                   </div>
+                  {habit.type==="timed"?(
+                    <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.05)"}}>
+                      {habit.slots.map((slot,si)=>{const val=logs[lk(habit.id,slot)];return(<button key={slot} onClick={()=>cycleLog(habit.id,slot)} style={{flex:1,border:"none",padding:"12px 0",background:val==="done"?"#F0FDF4":val==="skip"?"#FEF2F2":"#FAFAFA",borderRight:si<habit.slots.length-1?"1px solid rgba(0,0,0,0.05)":"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{val==="done"?"✅":val==="skip"?"❌":"⬜"}</span><span style={{fontSize:10,fontWeight:600,color:val==="done"?"#16A34A":val==="skip"?"#DC2626":"#94A3B8"}}>{slot}</span></button>);})}
+                    </div>
+                  ):(()=>{const val=logs[lk(habit.id)];return(<button onClick={()=>cycleLog(habit.id)} style={{width:"100%",border:"none",padding:"14px",background:val==="done"?"#F0FDF4":val==="skip"?"#FEF2F2":"#FAFAFA",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,borderTop:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:26}}>{val==="done"?"✅":val==="skip"?"❌":"⬜"}</span><span style={{fontSize:13,fontWeight:600,color:val==="done"?"#16A34A":val==="skip"?"#DC2626":"#94A3B8"}}>{val==="done"?"¡Hecho!":val==="skip"?"No hecho":"Toca para marcar"}</span></button>);})()}
                 </div>
-                {habit.type==="timed"?(
-                  <div style={{display:"flex",borderTop:"1px solid rgba(0,0,0,0.05)"}}>
-                    {habit.slots.map((slot,si)=>{const val=logs[logKey(habit.id,slot)];return(<button key={slot} onClick={()=>cycleLog(habit.id,slot)} style={{flex:1,border:"none",padding:"12px 0",background:val==="done"?"#F0FDF4":val==="skip"?"#FEF2F2":"#FAFAFA",borderRight:si<habit.slots.length-1?"1px solid rgba(0,0,0,0.05)":"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{val==="done"?"✅":val==="skip"?"❌":"⬜"}</span><span style={{fontSize:10,fontWeight:600,color:val==="done"?"#16A34A":val==="skip"?"#DC2626":"#94A3B8"}}>{slot}</span></button>);})}
-                  </div>
-                ):(()=>{const val=logs[logKey(habit.id)];return(<button onClick={()=>cycleLog(habit.id)} style={{width:"100%",border:"none",padding:"14px",background:val==="done"?"#F0FDF4":val==="skip"?"#FEF2F2":"#FAFAFA",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,borderTop:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:26}}>{val==="done"?"✅":val==="skip"?"❌":"⬜"}</span><span style={{fontSize:13,fontWeight:600,color:val==="done"?"#16A34A":val==="skip"?"#DC2626":"#94A3B8"}}>{val==="done"?"¡Hecho!":val==="skip"?"No hecho":"Toca para marcar"}</span></button>);})()}
+              );
+            })
+          )}
+        </div>
+      ):(
+        <div style={{padding:"16px 16px 0"}}>
+          <p style={{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:16,textAlign:"center"}}>{MONTHS_FULL[new Date().getMonth()+1]} {new Date().getFullYear()}</p>
+          {habits.map(habit=>{const str=streak(habit);const p=pct(habit);const now=new Date();const year=now.getFullYear();const month=now.getMonth();const dim=new Date(year,month+1,0).getDate();const fdow=new Date(year,month,1).getDay();return(
+            <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",padding:"14px",marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><p style={{fontSize:14,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p><div style={{display:"flex",gap:8}}>{str>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:700}}>🔥{str}</span>}{p!==null&&<span style={{fontSize:11,fontWeight:700,color:p>=80?"#16A34A":p>=50?"#F59E0B":"#DC2626"}}>{p}%</span>}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+                {DAYS_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:9,color:"#94A3B8",fontWeight:600,paddingBottom:2}}>{d}</div>)}
+                {Array.from({length:fdow}).map((_,i)=><div key={`e${i}`}/>)}
+                {Array.from({length:dim}).map((_,i)=>{const day=i+1;const d=new Date(year,month,day);const dow=d.getDay();const dss=ds(d);const isApp=habit.days.includes(dow);const isFut=day>now.getDate();let st=null;if(isApp&&!isFut){if(habit.type==="timed"){const aD=habit.slots.every(s=>logs[`${dss}_${habit.id}_${s}`]==="done");const aS=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="skip");const aDo=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="done");if(aD)st="done";else if(aS&&aDo)st="partial";else if(aS)st="skip";}else{st=logs[`${dss}_${habit.id}`]||null;}}const isT=day===now.getDate();return(<div key={day} style={{aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,background:!isApp?"transparent":isFut?"#F1F5F9":st==="done"?"#22C55E":st==="partial"?"#F59E0B":st==="skip"?"#EF4444":"#E2E8F0",color:!isApp?"transparent":isFut?"#94A3B8":st?"white":"#94A3B8",border:isT?"2px solid #1B4FD8":"none"}}>{isApp?day:""}</div>);})}
               </div>
-            );
-          })}
+            </div>
+          );})}
         </div>
       )}
     </div>
   );
-
-  const ViewMonth=()=>{
-    const now=new Date();const year=now.getFullYear();const month=now.getMonth();const dim=new Date(year,month+1,0).getDate();const firstDow=new Date(year,month,1).getDay();
-    return(<div style={{padding:"16px 16px 0"}}>
-      <p style={{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:16,textAlign:"center"}}>{MONTHS_FULL[month+1]} {year}</p>
-      {habits.map(habit=>{const pct=getMonthPct(habit);const streak=getStreak(habit);return(
-        <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",padding:"14px",marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <p style={{fontSize:14,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>{streak>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:700}}>🔥{streak}</span>}{pct!==null&&<span style={{fontSize:11,fontWeight:700,color:pct>=80?"#16A34A":pct>=50?"#F59E0B":"#DC2626"}}>{pct}%</span>}</div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
-            {DAYS_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:9,color:"#94A3B8",fontWeight:600,paddingBottom:2}}>{d}</div>)}
-            {Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}
-            {Array.from({length:dim}).map((_,i)=>{const day=i+1;const d=new Date(year,month,day);const dow=d.getDay();const ds=dateStr(d);const isApp=habit.days.includes(dow);const isFut=day>now.getDate();let st=null;if(isApp&&!isFut){if(habit.type==="timed"){const aD=habit.slots.every(s=>logs[`${ds}_${habit.id}_${s}`]==="done");const aS=habit.slots.some(s=>logs[`${ds}_${habit.id}_${s}`]==="skip");const aDo=habit.slots.some(s=>logs[`${ds}_${habit.id}_${s}`]==="done");if(aD)st="done";else if(aS&&aDo)st="partial";else if(aS)st="skip";}else{st=logs[`${ds}_${habit.id}`]||null;}}const isT2=day===now.getDate();return(<div key={day} style={{aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,background:!isApp?"transparent":isFut?"#F1F5F9":st==="done"?"#22C55E":st==="partial"?"#F59E0B":st==="skip"?"#EF4444":"#E2E8F0",color:!isApp?"transparent":isFut?"#94A3B8":st?"white":"#94A3B8",border:isT2?"2px solid #1B4FD8":"none"}}>{isApp?day:""}</div>);})}
-          </div>
-        </div>
-      );})}
-    </div>);
-  };
-
-  return(<div style={{paddingBottom:20}}>
-    <div style={{background:"linear-gradient(135deg,#059669,#10B981)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-        <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🏋️</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Hábitos</span></div>
-        <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})}</p></div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-          <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
-          <button onClick={openAdd} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Hábito</button>
-        </div>
-      </div>
-      <div style={{display:"flex",gap:0,marginTop:14,background:"rgba(0,0,0,0.15)",borderRadius:10,padding:3,width:"fit-content"}}>{[["today","📅 Días"],["month","📊 Mes"]].map(([v,l])=>(<button key={v} onClick={()=>setView(v)} style={{border:"none",borderRadius:8,padding:"6px 18px",fontSize:12,fontWeight:600,cursor:"pointer",background:view===v?"white":"transparent",color:view===v?"#059669":"rgba(255,255,255,0.7)"}}>{l}</button>))}</div>
-    </div>
-    {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:10}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(5,150,105,0.12)",border:"1.5px solid rgba(5,150,105,0.12)",padding:16}}>
-      <p style={{fontSize:13,fontWeight:600,color:"#059669",marginBottom:12}}>{editHabit?"Editar hábito":"Nuevo hábito"}</p>
-      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nombre del hábito" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
-      <div style={{display:"flex",gap:8,marginBottom:10}}>{[["simple","Simple ✅"],["timed","Por horario 🕐"]].map(([v,l])=>(<button key={v} onClick={()=>setNewType(v)} style={{flex:1,border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",background:newType===v?"#ECFDF5":"#F8FAFF",color:newType===v?"#059669":"#94A3B8",outline:newType===v?"2px solid #059669":"2px solid transparent"}}>{l}</button>))}</div>
-      <p style={{fontSize:11,color:"#64748B",fontWeight:600,marginBottom:6}}>Días que aplica:</p>
-      <div style={{display:"flex",gap:6,marginBottom:14}}>{["D","L","M","M","J","V","S"].map((d,i)=>(<button key={i} onClick={()=>toggleDay(i)} style={{flex:1,border:"none",borderRadius:8,padding:"7px 0",fontSize:11,fontWeight:700,cursor:"pointer",background:newDays.includes(i)?"#059669":"#F1F5F9",color:newDays.includes(i)?"white":"#94A3B8"}}>{d}</button>))}</div>
-      <div style={{display:"flex",gap:10}}>
-        <button onClick={()=>setShowForm(false)} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button>
-        <button onClick={saveHabit} disabled={!newName.trim()} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:newName.trim()?"linear-gradient(135deg,#059669,#10B981)":"#E2E8F0",color:newName.trim()?"#fff":"#94A3B8"}}>Guardar</button>
-      </div>
-    </div></div>)}
-    {view==="today"?<ViewToday/>:<ViewMonth/>}
-  </div>);
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🛒 COMPRAS — con ↑↓, editar y fecha tentativa
+// 🛒 COMPRAS
 // ═══════════════════════════════════════════════════════════════
 function Compras({onBackup}) {
-  const [items,setItems]=useState(()=>{try{return JSON.parse(localStorage.getItem(SK_COMPRAS))||[];}catch{return [];}});
-  const [text,setText]=useState("");const inputRef=useRef(null);
-  useEffect(()=>{try{localStorage.setItem(SK_COMPRAS,JSON.stringify(items));}catch{}},[items]);
+  const [items,setItems]=useState(()=>load(SK_COMPRAS));
+  const [text,setText]=useState("");
+  const inputRef=useRef(null);
+  useEffect(()=>save(SK_COMPRAS,items),[items]);
   const add=()=>{if(!text.trim())return;setItems(p=>[{id:Date.now().toString(),text:text.trim(),done:false,dueDate:null},...p]);setText("");inputRef.current?.focus();};
-  const toggle=(id)=>setItems(p=>p.map(i=>i.id===id?{...i,done:!i.done}:i));
-  const del=(id)=>setItems(p=>p.filter(i=>i.id!==id));
-  const clearDone=()=>setItems(p=>p.filter(i=>!i.done));
-  const update=(id,patch)=>setItems(p=>p.map(i=>i.id===id?{...i,...patch}:i));
-  const pending=items.filter(i=>!i.done);const done=items.filter(i=>i.done);
+  const pending=items.filter(i=>!i.done);
+  const done=items.filter(i=>i.done);
 
-  const CompraItem=({item,idx,total,isDone})=>{
+  const Item=({item,idx,total,isDone})=>{
     const [editing,setEditing]=useState(false);
-    const [editText,setEditText]=useState(item.text);
+    const [et,setEt]=useState(item.text);
     const [showDue,setShowDue]=useState(false);
-    const dueSem=dueDateSem(item.dueDate);
-    const saveEdit=()=>{if(editText.trim())update(item.id,{text:editText.trim()});setEditing(false);};
+    const upd=(patch)=>setItems(p=>p.map(i=>i.id===item.id?{...i,...patch}:i));
+    const ds2=dueSem(item.dueDate);
     return(
-      <div style={{background:isDone?"#F0FDF4":"#fff",borderRadius:13,border:isDone?"1.5px solid #BBF7D0":"1.5px solid rgba(234,88,12,0.07)",boxShadow:"0 2px 6px rgba(0,0,0,0.04)",marginBottom:8,overflow:"hidden"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 10px"}}>
-          {!isDone&&<MoveButtons idx={idx} total={total} onMove={(d)=>setItems(p=>moveItem(p,idx,d))}/>}
-          <button onClick={()=>toggle(item.id)} style={{width:26,height:26,borderRadius:"50%",border:isDone?"2px solid #22C55E":"2px solid #EA580C",background:isDone?"#22C55E":"none",cursor:"pointer",flexShrink:0,fontSize:13,color:isDone?"#fff":"#EA580C",display:"flex",alignItems:"center",justifyContent:"center"}}>{isDone?"✓":"○"}</button>
+      <div style={{background:isDone?"#F0FDF4":"#fff",borderRadius:13,border:isDone?"1.5px solid #BBF7D0":"1.5px solid rgba(234,88,12,0.08)",boxShadow:"0 2px 6px rgba(0,0,0,0.04)",marginBottom:8,overflow:"hidden"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 12px 10px"}}>
+          {!isDone&&<MoveBtn idx={idx} total={total} onMove={(d)=>setItems(p=>moveArr(p,idx,d))}/>}
+          <button onClick={()=>upd({done:!item.done})} style={{width:26,height:26,borderRadius:"50%",border:isDone?"2px solid #22C55E":"2px solid #EA580C",background:isDone?"#22C55E":"none",cursor:"pointer",flexShrink:0,fontSize:13,color:isDone?"#fff":"#EA580C",display:"flex",alignItems:"center",justifyContent:"center"}}>{isDone?"✓":"○"}</button>
           <div style={{flex:1,minWidth:0}}>
             {editing?(
-              <div style={{display:"flex",gap:6}}>
-                <input value={editText} onChange={e=>setEditText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")setEditing(false);}} autoFocus style={{flex:1,border:"1.5px solid #EA580C",borderRadius:8,padding:"5px 8px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
-                <button onClick={saveEdit} style={{background:"#EA580C",color:"#fff",border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
-                <button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+              <div style={{display:"flex",gap:5}}>
+                <input value={et} onChange={e=>setEt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(et.trim())upd({text:et.trim()});setEditing(false);}}} autoFocus style={{flex:1,border:"1.5px solid #EA580C",borderRadius:8,padding:"5px 8px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
+                <button onClick={()=>{if(et.trim())upd({text:et.trim()});setEditing(false);}} style={{background:"#EA580C",color:"#fff",border:"none",borderRadius:8,padding:"5px 9px",fontSize:11,cursor:"pointer"}}>OK</button>
+                <button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button>
               </div>
             ):(
               <p style={{fontSize:15,fontWeight:isDone?400:500,color:isDone?"#64748B":"#0F172A",margin:0,textDecoration:isDone?"line-through":"none"}}>{item.text}</p>
             )}
-            {item.dueDate&&dueSem&&(
-              <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:dueSem.bg,color:dueSem.color,display:"inline-block",marginTop:3,cursor:"pointer"}} onClick={()=>setShowDue(!showDue)}>
-                📅 {fmtDueDate(item.dueDate)} · {dueSem.label}
-              </span>
-            )}
+            {item.dueDate&&ds2&&<span onClick={()=>setShowDue(!showDue)} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:ds2.bg,color:ds2.color,display:"inline-block",marginTop:3,cursor:"pointer"}}>📅 {fmtDue(item.dueDate)} · {ds2.label}</span>}
             {showDue&&(
-              <div style={{display:"flex",gap:6,marginTop:6,alignItems:"center"}}>
-                <input type="date" value={item.dueDate||""} onChange={e=>{update(item.id,{dueDate:e.target.value});setShowDue(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
-                {item.dueDate&&<button onClick={()=>{update(item.id,{dueDate:null});setShowDue(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>Quitar</button>}
-                <button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+              <div style={{display:"flex",gap:5,marginTop:5,alignItems:"center"}}>
+                <input type="date" value={item.dueDate||""} onChange={e=>{upd({dueDate:e.target.value});setShowDue(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
+                {item.dueDate&&<button onClick={()=>{upd({dueDate:null});setShowDue(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Quitar</button>}
+                <button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button>
               </div>
             )}
           </div>
           {!isDone&&(
-            <div style={{display:"flex",gap:4,flexShrink:0}}>
-              {!item.dueDate&&<button onClick={()=>setShowDue(!showDue)} style={{background:"#FFF7ED",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#EA580C"}}>📅</button>}
-              <button onClick={()=>{setEditing(true);setEditText(item.text);}} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
-              <button onClick={()=>del(item.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
+            <div style={{display:"flex",gap:3,flexShrink:0}}>
+              {!item.dueDate&&<button onClick={()=>setShowDue(!showDue)} style={{background:"#FFF7ED",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>📅</button>}
+              <button onClick={()=>{setEditing(true);setEt(item.text);}} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>✏️</button>
+              <button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
             </div>
           )}
-          {isDone&&<button onClick={()=>del(item.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px",flexShrink:0}}>✕</button>}
+          {isDone&&<button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px",flexShrink:0}}>✕</button>}
         </div>
       </div>
     );
   };
 
-  return(<div style={{paddingBottom:20}}>
-    <div style={{background:"linear-gradient(135deg,#EA580C,#F97316)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-        <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🛒</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Compras</span></div>
-        <p style={{color:"rgba(255,255,255,0.65)",fontSize:12,fontWeight:300}}>{pending.length} por comprar{done.length>0?` · ${done.length} comprado${done.length!==1?"s":""}`:""}</p></div>
-        <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#EA580C,#F97316)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🛒</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Compras</span></div><p style={{color:"rgba(255,255,255,0.65)",fontSize:12,fontWeight:300}}>{pending.length} por comprar{done.length>0?` · ${done.length} comprado${done.length!==1?"s":""}`:""}</p></div>
+          <HdrBtn onClick={onBackup} label="💾 Backup"/>
+        </div>
+      </div>
+      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:10}}>
+        <div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(234,88,12,0.12)",border:"1.5px solid rgba(234,88,12,0.08)",display:"flex",overflow:"hidden"}}>
+          <input ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}} placeholder="¿Qué necesitas comprar?" style={{flex:1,border:"none",padding:"16px",fontSize:15,fontFamily:"inherit",color:"#0F172A",background:"transparent",outline:"none"}}/>
+          <button onClick={add} disabled={!text.trim()} style={{background:text.trim()?"linear-gradient(135deg,#EA580C,#F97316)":"#F1F5F9",color:text.trim()?"#fff":"#CBD5E1",border:"none",padding:"0 20px",fontSize:22,cursor:text.trim()?"pointer":"not-allowed"}}>+</button>
+        </div>
+      </div>
+      <div style={{padding:"16px 16px 0"}}>
+        {items.length===0?(<div style={{textAlign:"center",padding:"40px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><p style={{fontSize:15,fontWeight:500}}>Lista vacía</p></div>):(
+          <>
+            {pending.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={pending.length} isDone={false}/>)}
+            {done.length>0&&(
+              <div style={{marginTop:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,margin:0}}>✅ Comprado ({done.length})</p><button onClick={()=>setItems(p=>p.filter(i=>!i.done))} style={{background:"none",border:"none",color:"#EF4444",fontSize:11,fontWeight:600,cursor:"pointer"}}>Limpiar</button></div>
+                {done.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={done.length} isDone={true}/>)}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
-    <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:10}}>
-      <div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(234,88,12,0.12)",border:"1.5px solid rgba(234,88,12,0.08)",display:"flex",overflow:"hidden"}}>
-        <input ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}} placeholder="¿Qué necesitas comprar?" style={{flex:1,border:"none",padding:"16px",fontSize:15,fontFamily:"inherit",color:"#0F172A",background:"transparent",outline:"none"}}/>
-        <button onClick={add} disabled={!text.trim()} style={{background:text.trim()?"linear-gradient(135deg,#EA580C,#F97316)":"#F1F5F9",color:text.trim()?"#fff":"#CBD5E1",border:"none",padding:"0 20px",fontSize:22,cursor:text.trim()?"pointer":"not-allowed"}}>+</button>
-      </div>
-    </div>
-    <div style={{padding:"16px 16px 0"}}>
-      {items.length===0?(<div style={{textAlign:"center",padding:"52px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><p style={{fontSize:15,fontWeight:500}}>Lista vacía</p></div>):(
-        <>
-          {pending.map((item,idx)=><CompraItem key={item.id} item={item} idx={idx} total={pending.length} isDone={false}/>)}
-          {done.length>0&&(<div style={{marginTop:8}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,margin:0}}>✅ Comprado ({done.length})</p><button onClick={clearDone} style={{background:"none",border:"none",color:"#EF4444",fontSize:11,fontWeight:600,cursor:"pointer"}}>Limpiar</button></div>
-            {done.map((item,idx)=><CompraItem key={item.id} item={item} idx={idx} total={done.length} isDone={true}/>)}
-          </div>)}
-        </>
-      )}
-    </div>
-  </div>);
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 📌 FECHAS — con editar
+// 📌 FECHAS
 // ═══════════════════════════════════════════════════════════════
 function Fechas({onBackup}) {
-  const [fechas,setFechas]=useState(()=>{try{const s=JSON.parse(localStorage.getItem(SK_FECHAS));return s&&s.length>0?s:INITIAL_FECHAS;}catch{return INITIAL_FECHAS;}});
+  const [fechas,setFechas]=useState(()=>{const s=load(SK_FECHAS);return s.length>0?s:INITIAL_FECHAS;});
   const [showForm,setShowForm]=useState(false);
-  const [editFecha,setEditFecha]=useState(null);
+  const [editF,setEditF]=useState(null);
   const [tipo,setTipo]=useState("anual");const [name,setName]=useState("");const [emoji,setEmoji]=useState("");
   const [day,setDay]=useState("");const [month,setMonth]=useState("");const [date,setDate]=useState("");
-  useEffect(()=>{try{localStorage.setItem(SK_FECHAS,JSON.stringify(fechas));}catch{}},[fechas]);
-
-  const reset=()=>{setName("");setEmoji("");setDay("");setMonth("");setDate("");setTipo("anual");setEditFecha(null);};
+  useEffect(()=>save(SK_FECHAS,fechas),[fechas]);
+  const reset=()=>{setName("");setEmoji("");setDay("");setMonth("");setDate("");setTipo("anual");setEditF(null);};
   const openAdd=()=>{reset();setShowForm(true);};
-  const openEdit=(f)=>{setEditFecha(f);setName(f.name);setEmoji(f.emoji||"");setTipo(f.type);setDay(f.day?String(f.day):"");setMonth(f.month?String(f.month):"");setDate(f.date||"");setShowForm(true);};
-
-  const save=()=>{
+  const openEdit=(f)=>{setEditF(f);setName(f.name);setEmoji(f.emoji||"");setTipo(f.type);setDay(f.day?String(f.day):"");setMonth(f.month?String(f.month):"");setDate(f.date||"");setShowForm(true);};
+  const saveFecha=()=>{
     if(!name.trim())return;
-    if(tipo==="anual"&&(!day||!month))return;
-    if(tipo==="mensual"&&!day)return;
-    if(tipo==="unica"&&!date)return;
-    const item={id:editFecha?editFecha.id:Date.now().toString(),name:name.trim(),emoji:emoji.trim()||TIPO_CONFIG[tipo].icon,type:tipo,
+    const item={id:editF?editF.id:Date.now().toString(),name:name.trim(),emoji:emoji.trim()||TIPO_CONFIG[tipo].icon,type:tipo,
       ...(tipo==="anual"?{day:parseInt(day),month:parseInt(month)}:{}),
       ...(tipo==="mensual"?{day:parseInt(day)}:{}),
       ...(tipo==="unica"?{date}:{})};
-    if(editFecha){setFechas(p=>p.map(f=>f.id===editFecha.id?item:f).sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));}
-    else{setFechas(p=>[...p,item].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));}
+    if(editF)setFechas(p=>p.map(f=>f.id===editF.id?item:f).sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));
+    else setFechas(p=>[...p,item].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));
     reset();setShowForm(false);
   };
-
   const del=(id)=>setFechas(p=>p.filter(f=>f.id!==id));
   const sorted=[...fechas].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b));
-  const isFormValid=name.trim()&&((tipo==="anual"&&day&&month)||(tipo==="mensual"&&day)||(tipo==="unica"&&date));
-
+  const isOK=name.trim()&&((tipo==="anual"&&day&&month)||(tipo==="mensual"&&day)||(tipo==="unica"&&date));
   const FCard=({f})=>{const du=daysUntilFecha(f);const cfg=TIPO_CONFIG[f.type];const isHoy=du===0;const isPast=du<0;return(
     <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:isHoy?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":isPast?"#F8FAFF":"#fff",borderRadius:14,border:isHoy?"1.5px solid #FCD34D":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",opacity:isPast?0.7:1,marginBottom:8}}>
       <div style={{fontSize:24,flexShrink:0}}>{f.emoji||cfg.icon}</div>
       <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}><p style={{fontSize:14,fontWeight:600,color:isHoy?"#92400E":"#0F172A",margin:0}}>{f.name}</p><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:cfg.bg,color:cfg.color}}>{cfg.icon} {cfg.label}</span></div><p style={{fontSize:11,color:isHoy?"#B45309":"#64748B",margin:0}}>{formatFechaLabel(f)}{isHoy?" · 🎉 ¡HOY!":isPast?` · hace ${Math.abs(du)}d`:` · en ${du}d`}</p></div>
-      <button onClick={()=>openEdit(f)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 8px",fontSize:12,cursor:"pointer",color:"#64748B",flexShrink:0}}>✏️</button>
-      <button onClick={()=>del(f.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px 6px",flexShrink:0}}>✕</button>
+      <button onClick={()=>openEdit(f)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
+      <button onClick={()=>del(f.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
     </div>
   );};
-
-  const hoy=sorted.filter(f=>daysUntilFecha(f)===0);const prox7=sorted.filter(f=>{const d=daysUntilFecha(f);return d>0&&d<=7;});const prox30=sorted.filter(f=>{const d=daysUntilFecha(f);return d>7&&d<=30;});const resto=sorted.filter(f=>daysUntilFecha(f)>30);const pasadas=sorted.filter(f=>daysUntilFecha(f)<0);
   const Sec=({title,color,items})=>items.length===0?null:(<div style={{marginBottom:16}}><p style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{title}</p>{items.map(f=><FCard key={f.id} f={f}/>)}</div>);
-
-  return(<div style={{paddingBottom:20}}>
-    <div style={{background:"linear-gradient(135deg,#0F766E,#0D9488)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-        <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>📌</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Fechas</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{fechas.length} evento{fechas.length!==1?"s":""}</p></div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-          <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
-          <button onClick={openAdd} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Nueva</button>
+  const hoy=sorted.filter(f=>daysUntilFecha(f)===0);const prox7=sorted.filter(f=>{const d=daysUntilFecha(f);return d>0&&d<=7;});const prox30=sorted.filter(f=>{const d=daysUntilFecha(f);return d>7&&d<=30;});const resto=sorted.filter(f=>daysUntilFecha(f)>30);const pasadas=sorted.filter(f=>daysUntilFecha(f)<0);
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#0F766E,#0D9488)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>📌</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Fechas</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{fechas.length} evento{fechas.length!==1?"s":""}</p></div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+            <HdrBtn onClick={onBackup} label="💾 Backup"/>
+            <HdrBtn onClick={openAdd} label="+ Nueva"/>
+          </div>
         </div>
       </div>
+      {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(15,118,110,0.15)",border:"1.5px solid rgba(15,118,110,0.15)",padding:16}}>
+        <p style={{fontSize:13,fontWeight:600,color:"#0F766E",marginBottom:12}}>{editF?"Editar fecha":"Nueva fecha"}</p>
+        <div style={{display:"flex",gap:8,marginBottom:10}}><input value={emoji} onChange={e=>setEmoji(e.target.value)} placeholder="😀" maxLength={2} style={{width:48,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:20,textAlign:"center",color:"#0F172A",outline:"none"}}/><input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre del evento" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/></div>
+        <div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(TIPO_CONFIG).map(([k,v])=>(<button key={k} onClick={()=>setTipo(k)} style={{flex:1,border:"none",borderRadius:10,padding:"8px 4px",fontSize:11,fontWeight:600,cursor:"pointer",background:tipo===k?v.bg:"#F8FAFF",color:tipo===k?v.color:"#94A3B8",outline:tipo===k?`2px solid ${v.color}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:16}}>{v.icon}</span><span>{v.label}</span></button>))}</div>
+        {tipo==="anual"&&(<div style={{display:"flex",gap:10,marginBottom:12}}><input value={day} onChange={e=>setDay(e.target.value)} placeholder="Día" type="number" min="1" max="31" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/><select value={month} onChange={e=>setMonth(e.target.value)} style={{flex:2,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:month?"#0F172A":"#94A3B8",outline:"none",background:"#fff"}}><option value="">Mes</option>{MONTHS_FULL.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select></div>)}
+        {tipo==="mensual"&&(<input value={day} onChange={e=>setDay(e.target.value)} placeholder="Día del mes" type="number" min="1" max="31" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none",boxSizing:"border-box",marginBottom:12}}/>)}
+        {tipo==="unica"&&(<input value={date} onChange={e=>setDate(e.target.value)} type="date" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none",boxSizing:"border-box",marginBottom:12}}/>)}
+        <p style={{fontSize:11,color:"#94A3B8",marginBottom:12,fontStyle:"italic"}}>{TIPO_CONFIG[tipo].desc}</p>
+        <div style={{display:"flex",gap:10}}><button onClick={()=>{setShowForm(false);reset();}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button><button onClick={saveFecha} disabled={!isOK} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:isOK?"pointer":"not-allowed",background:isOK?"linear-gradient(135deg,#0F766E,#0D9488)":"#E2E8F0",color:isOK?"#fff":"#94A3B8"}}>Guardar</button></div>
+      </div></div>)}
+      <div style={{padding:`${showForm?"16px":"0"} 16px 0`,marginTop:showForm?0:-18}}>
+        {fechas.length===0?(<div style={{textAlign:"center",padding:"40px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>📌</div><p style={{fontSize:15,fontWeight:500}}>Sin fechas guardadas</p></div>):(<><Sec title="🎉 Hoy" color="#B45309" items={hoy}/><Sec title="📅 Próximos 7 días" color="#16A34A" items={prox7}/><Sec title="🗓️ Este mes" color="#1B4FD8" items={prox30}/><Sec title="📋 Más adelante" color="#64748B" items={resto}/><Sec title="✓ Ya pasaron" color="#94A3B8" items={pasadas}/></>)}
+      </div>
     </div>
-    {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:10}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(15,118,110,0.12)",border:"1.5px solid rgba(15,118,110,0.12)",padding:16}}>
-      <p style={{fontSize:13,fontWeight:600,color:"#0F766E",marginBottom:12}}>{editFecha?"Editar fecha":"Nueva fecha"}</p>
-      <div style={{display:"flex",gap:8,marginBottom:10}}><input value={emoji} onChange={e=>setEmoji(e.target.value)} placeholder="😀" maxLength={2} style={{width:48,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:20,textAlign:"center",color:"#0F172A",outline:"none"}}/><input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre del evento" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/></div>
-      <div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(TIPO_CONFIG).map(([k,v])=>(<button key={k} onClick={()=>setTipo(k)} style={{flex:1,border:"none",borderRadius:10,padding:"8px 4px",fontSize:11,fontWeight:600,cursor:"pointer",background:tipo===k?v.bg:"#F8FAFF",color:tipo===k?v.color:"#94A3B8",outline:tipo===k?`2px solid ${v.color}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:16}}>{v.icon}</span><span>{v.label}</span></button>))}</div>
-      {tipo==="anual"&&(<div style={{display:"flex",gap:10,marginBottom:12}}><input value={day} onChange={e=>setDay(e.target.value)} placeholder="Día" type="number" min="1" max="31" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/><select value={month} onChange={e=>setMonth(e.target.value)} style={{flex:2,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:month?"#0F172A":"#94A3B8",outline:"none",background:"#fff"}}><option value="">Mes</option>{MONTHS_FULL.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select></div>)}
-      {tipo==="mensual"&&(<input value={day} onChange={e=>setDay(e.target.value)} placeholder="Día del mes (ej: 5)" type="number" min="1" max="31" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none",boxSizing:"border-box",marginBottom:12}}/>)}
-      {tipo==="unica"&&(<input value={date} onChange={e=>setDate(e.target.value)} type="date" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none",boxSizing:"border-box",marginBottom:12}}/>)}
-      <p style={{fontSize:11,color:"#94A3B8",marginBottom:12,fontStyle:"italic"}}>{TIPO_CONFIG[tipo].desc}</p>
-      <div style={{display:"flex",gap:10}}><button onClick={()=>{setShowForm(false);reset();}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button><button onClick={save} disabled={!isFormValid} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:isFormValid?"pointer":"not-allowed",background:isFormValid?"linear-gradient(135deg,#0F766E,#0D9488)":"#E2E8F0",color:isFormValid?"#fff":"#94A3B8"}}>Guardar</button></div>
-    </div></div>)}
-    <div style={{padding:`${showForm?"16px":"0"} 16px 0`,marginTop:showForm?0:-18}}>
-      {fechas.length===0?(<div style={{textAlign:"center",padding:"52px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>📌</div><p style={{fontSize:15,fontWeight:500}}>Sin fechas guardadas</p></div>):(<><Sec title="🎉 Hoy" color="#B45309" items={hoy}/><Sec title="📅 Próximos 7 días" color="#16A34A" items={prox7}/><Sec title="🗓️ Este mes" color="#1B4FD8" items={prox30}/><Sec title="📋 Más adelante" color="#64748B" items={resto}/><Sec title="✓ Ya pasaron" color="#94A3B8" items={pasadas}/></>)}
-    </div>
-  </div>);
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎂 CUMPLEAÑOS — con editar
+// 🎂 CUMPLEAÑOS
 // ═══════════════════════════════════════════════════════════════
 function Cumpleanos({onBackup}) {
-  const [bdays,setBdays]=useState(()=>{try{const s=JSON.parse(localStorage.getItem(SK_BDAYS));return s&&s.length>0?s:INITIAL_BDAYS;}catch{return INITIAL_BDAYS;}});
+  const [bdays,setBdays]=useState(()=>{const s=load(SK_BDAYS);return s.length>0?s:INITIAL_BDAYS;});
   const [showForm,setShowForm]=useState(false);
-  const [editBday,setEditBday]=useState(null);
-  const [newName,setNewName]=useState("");const [newDay,setNewDay]=useState("");const [newMonth,setNewMonth]=useState("");
-  useEffect(()=>{try{localStorage.setItem(SK_BDAYS,JSON.stringify(bdays));}catch{}},[bdays]);
-
-  const openAdd=()=>{setEditBday(null);setNewName("");setNewDay("");setNewMonth("");setShowForm(true);};
-  const openEdit=(b)=>{setEditBday(b);setNewName(b.name);setNewDay(String(b.day));setNewMonth(String(b.month));setShowForm(true);};
-
-  const save=()=>{
-    if(!newName.trim()||!newDay||!newMonth)return;
-    const item={id:editBday?editBday.id:Date.now().toString(),name:newName.trim(),day:parseInt(newDay),month:parseInt(newMonth)};
-    if(editBday){setBdays(p=>p.map(b=>b.id===editBday.id?item:b).sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month)));}
-    else{setBdays(p=>[...p,item].sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month)));}
-    setNewName("");setNewDay("");setNewMonth("");setShowForm(false);setEditBday(null);
-  };
-
+  const [editB,setEditB]=useState(null);
+  const [nName,setNName]=useState("");const [nDay,setNDay]=useState("");const [nMonth,setNMonth]=useState("");
+  useEffect(()=>save(SK_BDAYS,bdays),[bdays]);
+  const openAdd=()=>{setEditB(null);setNName("");setNDay("");setNMonth("");setShowForm(true);};
+  const openEdit=(b)=>{setEditB(b);setNName(b.name);setNDay(String(b.day));setNMonth(String(b.month));setShowForm(true);};
+  const saveB=()=>{if(!nName.trim()||!nDay||!nMonth)return;const item={id:editB?editB.id:Date.now().toString(),name:nName.trim(),day:parseInt(nDay),month:parseInt(nMonth)};if(editB)setBdays(p=>p.map(b=>b.id===editB.id?item:b).sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month)));else setBdays(p=>[...p,item].sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month)));setNName("");setNDay("");setNMonth("");setShowForm(false);setEditB(null);};
   const del=(id)=>setBdays(p=>p.filter(b=>b.id!==id));
   const sorted=[...bdays].sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month));
-  const todayBdays=sorted.filter(b=>isSameDay(b.day,b.month));const soon=sorted.filter(b=>{const d=daysUntilBday(b.day,b.month);return d>0&&d<=7;});const rest=sorted.filter(b=>daysUntilBday(b.day,b.month)>7);
-
+  const todayB=sorted.filter(b=>isSameDay(b.day,b.month));const soon=sorted.filter(b=>{const d=daysUntilBday(b.day,b.month);return d>0&&d<=7;});const rest=sorted.filter(b=>daysUntilBday(b.day,b.month)>7);
   const BCard=({b})=>{const du=daysUntilBday(b.day,b.month);const td=isSameDay(b.day,b.month);return(
     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:td?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":du<=7?"#F0FDF4":"#fff",borderRadius:13,border:td?"1.5px solid #FCD34D":du<=7?"1.5px solid #BBF7D0":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",marginBottom:8}}>
       <div style={{fontSize:td?28:20}}>{td?"🎂":"🎈"}</div>
       <div style={{flex:1,minWidth:0}}><p style={{fontSize:14,fontWeight:600,color:td?"#92400E":"#0F172A",margin:0}}>{b.name}</p><p style={{fontSize:12,color:td?"#B45309":"#64748B",margin:"2px 0 0"}}>{b.day} de {MONTHS_FULL[b.month]}{td?" · 🎉 ¡HOY!":`· en ${du}d`}</p></div>
-      <button onClick={()=>openEdit(b)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 8px",fontSize:12,cursor:"pointer",color:"#64748B",flexShrink:0}}>✏️</button>
-      <button onClick={()=>del(b.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px 6px",flexShrink:0}}>✕</button>
+      <button onClick={()=>openEdit(b)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
+      <button onClick={()=>del(b.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
     </div>
   );};
-
-  return(<div style={{paddingBottom:20}}>
-    <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-        <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🎂</span><span style={{color:"#fff",fontSize:22,fontWeight:700,letterSpacing:"-0.5px"}}>Cumpleaños</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{bdays.length} personas</p></div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-          <button onClick={onBackup} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>💾 Backup</button>
-          <button onClick={openAdd} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Nuevo</button>
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🎂</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Cumpleaños</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{bdays.length} personas</p></div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+            <HdrBtn onClick={onBackup} label="💾 Backup"/>
+            <HdrBtn onClick={openAdd} label="+ Nuevo"/>
+          </div>
         </div>
       </div>
+      {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(124,58,237,0.15)",border:"1.5px solid rgba(124,58,237,0.12)",padding:16}}>
+        <p style={{fontSize:13,fontWeight:600,color:"#7C3AED",marginBottom:12}}>{editB?"Editar cumpleaños":"Agregar cumpleaños"}</p>
+        <input value={nName} onChange={e=>setNName(e.target.value)} placeholder="Nombre" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
+        <div style={{display:"flex",gap:10,marginBottom:12}}><input value={nDay} onChange={e=>setNDay(e.target.value)} placeholder="Día" type="number" min="1" max="31" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/><select value={nMonth} onChange={e=>setNMonth(e.target.value)} style={{flex:2,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:nMonth?"#0F172A":"#94A3B8",outline:"none",background:"#fff"}}><option value="">Mes</option>{MONTHS_FULL.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select></div>
+        <div style={{display:"flex",gap:10}}><button onClick={()=>{setShowForm(false);setEditB(null);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button><button onClick={saveB} disabled={!nName.trim()||!nDay||!nMonth} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:nName.trim()&&nDay&&nMonth?"linear-gradient(135deg,#7C3AED,#6D28D9)":"#E2E8F0",color:nName.trim()&&nDay&&nMonth?"#fff":"#94A3B8"}}>Guardar</button></div>
+      </div></div>)}
+      <div style={{padding:`${showForm?"16px":"0"} 16px 0`,marginTop:showForm?0:-18}}>
+        {todayB.length>0&&<div style={{marginBottom:20,marginTop:showForm?0:18}}><p style={{fontSize:11,fontWeight:700,color:"#B45309",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>🎉 Hoy</p>{todayB.map(b=><BCard key={b.id} b={b}/>)}</div>}
+        {soon.length>0&&<div style={{marginBottom:20,marginTop:!showForm&&todayB.length===0?18:0}}><p style={{fontSize:11,fontWeight:700,color:"#16A34A",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>📅 Próximos 7 días</p>{soon.map(b=><BCard key={b.id} b={b}/>)}</div>}
+        {rest.length>0&&<div style={{marginTop:!showForm&&todayB.length===0&&soon.length===0?18:0}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>📋 Próximos</p>{rest.map(b=><BCard key={b.id} b={b}/>)}</div>}
+      </div>
     </div>
-    {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:10}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(124,58,237,0.12)",border:"1.5px solid rgba(124,58,237,0.1)",padding:16}}>
-      <p style={{fontSize:13,fontWeight:600,color:"#7C3AED",marginBottom:12}}>{editBday?"Editar cumpleaños":"Agregar cumpleaños"}</p>
-      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nombre" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
-      <div style={{display:"flex",gap:10,marginBottom:12}}><input value={newDay} onChange={e=>setNewDay(e.target.value)} placeholder="Día" type="number" min="1" max="31" style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/><select value={newMonth} onChange={e=>setNewMonth(e.target.value)} style={{flex:2,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:newMonth?"#0F172A":"#94A3B8",outline:"none",background:"#fff"}}><option value="">Mes</option>{MONTHS_FULL.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select></div>
-      <div style={{display:"flex",gap:10}}><button onClick={()=>{setShowForm(false);setEditBday(null);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button><button onClick={save} disabled={!newName.trim()||!newDay||!newMonth} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:newName.trim()&&newDay&&newMonth?"linear-gradient(135deg,#7C3AED,#6D28D9)":"#E2E8F0",color:newName.trim()&&newDay&&newMonth?"#fff":"#94A3B8"}}>Guardar</button></div>
-    </div></div>)}
-    <div style={{padding:`${showForm?"16px":"0"} 16px 0`,marginTop:showForm?0:-18}}>
-      {todayBdays.length>0&&<div style={{marginBottom:20,marginTop:showForm?0:18}}><p style={{fontSize:11,fontWeight:700,color:"#B45309",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>🎉 Hoy</p>{todayBdays.map(b=><BCard key={b.id} b={b}/>)}</div>}
-      {soon.length>0&&<div style={{marginBottom:20,marginTop:!showForm&&todayBdays.length===0?18:0}}><p style={{fontSize:11,fontWeight:700,color:"#16A34A",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>📅 Próximos 7 días</p>{soon.map(b=><BCard key={b.id} b={b}/>)}</div>}
-      {rest.length>0&&<div style={{marginTop:!showForm&&todayBdays.length===0&&soon.length===0?18:0}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>📋 Próximos</p>{rest.map(b=><BCard key={b.id} b={b}/>)}</div>}
-    </div>
-  </div>);
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -764,38 +670,26 @@ function App() {
   const [showBanner,setShowBanner]=useState(()=>needsBackup());
   const [showRestore,setShowRestore]=useState(false);
   const fileRef=useRef(null);
-
   const handleBackup=()=>{doBackup();setShowBanner(false);};
-  const handleRestore=(e)=>{const file=e.target.files[0];if(!file)return;doRestore(file,()=>{alert("✅ Backup cargado. La app se reiniciará.");window.location.reload();});};
-
-  const TABS=[
-    {id:"basurero",  icon:"⚡",label:"Basurero"},
-    {id:"laboral",   icon:"🔵",label:"Laboral"},
-    {id:"personal",  icon:"🟣",label:"Personal"},
-    {id:"habitos",   icon:"🏋️",label:"Hábitos"},
-    {id:"compras",   icon:"🛒",label:"Compras"},
-    {id:"fechas",    icon:"📌",label:"Fechas"},
-    {id:"cumpleanos",icon:"🎂",label:"Cumples"},
-  ];
-
+  const handleRestore=(e)=>{const file=e.target.files[0];if(!file)return;doRestore(file,()=>{alert("✅ Backup cargado. Recargando...");window.location.reload();});};
+  const TABS=[{id:"basurero",icon:"⚡",label:"Basurero"},{id:"laboral",icon:"🔵",label:"Laboral"},{id:"personal",icon:"🟣",label:"Personal"},{id:"habitos",icon:"🏋️",label:"Hábitos"},{id:"compras",icon:"🛒",label:"Compras"},{id:"fechas",icon:"📌",label:"Fechas"},{id:"cumpleanos",icon:"🎂",label:"Cumples"}];
   return(
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#EEF4FF,#F8FAFF,#E8F0FF)",fontFamily:"'Sora',sans-serif"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;}textarea,input,select{font-family:'Sora',sans-serif;}button:active{opacity:0.75;transform:scale(0.96);}input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;}textarea,input,select{font-family:'Sora',sans-serif;}button:active{opacity:0.8;}`}</style>
 
       {/* BACKUP BANNER */}
       {showBanner&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 4px 20px rgba(27,79,216,0.3)"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 4px 20px rgba(27,79,216,0.3)"}}>
           <span style={{fontSize:18}}>💾</span>
           <div style={{flex:1}}><p style={{color:"#fff",fontSize:12,fontWeight:600,margin:0}}>Backup pendiente</p><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,margin:0}}>Último: {lastBackupLabel()}</p></div>
           <button onClick={()=>setShowRestore(!showRestore)} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:8,padding:"5px 10px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Restaurar</button>
           <button onClick={handleBackup} style={{background:"white",border:"none",borderRadius:8,padding:"5px 12px",color:"#1B4FD8",fontSize:11,fontWeight:700,cursor:"pointer"}}>💾 Guardar</button>
-          <button onClick={()=>setShowBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",fontSize:16,cursor:"pointer",padding:"4px"}}>✕</button>
+          <button onClick={()=>setShowBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",fontSize:18,cursor:"pointer",padding:"2px 6px"}}>✕</button>
         </div>
       )}
       {showRestore&&(
-        <div style={{position:"fixed",top:showBanner?56:0,left:0,right:0,zIndex:99,background:"#fff",padding:"16px",boxShadow:"0 4px 20px rgba(0,0,0,0.12)",borderBottom:"1.5px solid #E2E8F0"}}>
+        <div style={{position:"fixed",top:showBanner?56:0,left:0,right:0,zIndex:190,background:"#fff",padding:"16px",boxShadow:"0 4px 20px rgba(0,0,0,0.12)",borderBottom:"1.5px solid #E2E8F0"}}>
           <p style={{fontSize:13,fontWeight:600,color:"#0F172A",marginBottom:8}}>Cargar backup</p>
-          <p style={{fontSize:12,color:"#64748B",marginBottom:12}}>Selecciona un archivo .json de backup previo.</p>
           <input ref={fileRef} type="file" accept=".json" onChange={handleRestore} style={{display:"none"}}/>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>fileRef.current?.click()} style={{flex:1,background:"linear-gradient(135deg,#1B4FD8,#2563EB)",color:"#fff",border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer"}}>📂 Seleccionar archivo</button>
@@ -804,7 +698,13 @@ function App() {
         </div>
       )}
 
-      <div style={{paddingBottom:76,paddingTop:showBanner?(showRestore?120:56):0}}>
+      {/* CONTENIDO — scroll independiente, no toca el tab bar */}
+      <div style={{
+        position:"fixed",top:showBanner?(showRestore?120:56):0,
+        left:0,right:0,bottom:62,
+        overflowY:"auto",
+        WebkitOverflowScrolling:"touch",
+      }}>
         {tab==="basurero"?<Basurero onMoved={(dest)=>setTab(dest)} onBackup={handleBackup}/>:
          tab==="laboral"?<Laboral onBackup={handleBackup}/>:
          tab==="personal"?<Personal onBackup={handleBackup}/>:
@@ -814,12 +714,23 @@ function App() {
          <Cumpleanos onBackup={handleBackup}/>}
       </div>
 
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(255,255,255,0.95)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(27,79,216,0.08)",display:"flex",padding:"8px 0 14px",boxShadow:"0 -4px 20px rgba(0,0,0,0.06)"}}>
-        {TABS.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}>
-          <span style={{fontSize:17}}>{t.icon}</span>
-          <span style={{fontSize:8,fontWeight:600,color:tab===t.id?"#1B4FD8":"#94A3B8"}}>{t.label}</span>
-          {tab===t.id&&<div style={{width:16,height:2,borderRadius:2,background:"#1B4FD8",marginTop:1}}/>}
-        </button>))}
+      {/* TAB BAR — siempre visible, siempre arriba */}
+      <div style={{
+        position:"fixed",bottom:0,left:0,right:0,height:62,
+        background:"rgba(255,255,255,0.97)",
+        backdropFilter:"blur(20px)",
+        borderTop:"1px solid rgba(27,79,216,0.1)",
+        display:"flex",alignItems:"center",
+        boxShadow:"0 -2px 16px rgba(0,0,0,0.07)",
+        zIndex:300,
+      }}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"6px 0",height:"100%",justifyContent:"center"}}>
+            <span style={{fontSize:18,lineHeight:1}}>{t.icon}</span>
+            <span style={{fontSize:8,fontWeight:700,color:tab===t.id?"#1B4FD8":"#94A3B8",letterSpacing:0.2}}>{t.label}</span>
+            {tab===t.id&&<div style={{width:18,height:2,borderRadius:2,background:"#1B4FD8"}}/>}
+          </button>
+        ))}
       </div>
     </div>
   );
