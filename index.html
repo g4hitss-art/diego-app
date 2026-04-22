@@ -23,17 +23,23 @@
     const { useState, useEffect, useRef } = React;
 
 // ─── STORAGE KEYS ────────────────────────────────────────────
-const SK_TASKS   = "basurero_v2";
-const SK_LABORAL = "laboral_v1";
-const SK_PERSONAL= "personal_v1";
-const SK_BDAYS   = "cumples_v1";
-const SK_HABITS  = "habits_v1";
-const SK_LOGS    = "habit_logs_v1";
-const SK_FECHAS  = "fechas_v1";
-const SK_COMPRAS = "compras_v1";
-const SK_BKDATE  = "backup_date_v1";
-const ALL_KEYS   = [SK_TASKS,SK_LABORAL,SK_PERSONAL,SK_BDAYS,SK_HABITS,SK_LOGS,SK_FECHAS,SK_COMPRAS];
+const SK_TASKS    = "basurero_v2";
+const SK_LABORAL  = "laboral_v1";
+const SK_PERSONAL = "personal_v1";
+const SK_BDAYS    = "cumples_v1";
+const SK_HABITS   = "habits_v1";
+const SK_LOGS     = "habit_logs_v1";
+const SK_FECHAS   = "fechas_v1";
+const SK_COMPRAS  = "compras_v1";
+const SK_NOTAS    = "notas_v1";
+const SK_CONECTAR = "conectar_v1";
+const SK_CLOGS    = "conectar_logs_v1";
+const SK_PERSONS  = "persons_v1";
+const SK_BKDATE   = "backup_date_v1";
+const ALL_KEYS    = [SK_TASKS,SK_LABORAL,SK_PERSONAL,SK_BDAYS,SK_HABITS,SK_LOGS,SK_FECHAS,SK_COMPRAS,SK_NOTAS,SK_CONECTAR,SK_CLOGS,SK_PERSONS];
 
+// ─── INITIAL DATA ────────────────────────────────────────────
+const DEFAULT_PERSONS = ["Camilo","Paola","Luis Torres","Marcela","David","Patricia","Jhony","Adriana","Claudia","Henry","Grace","Leo","Leonardo","Víctor","Bibiana","Samuel","Fabián"];
 const INITIAL_BDAYS = [
   {id:"1",name:"Geny",day:11,month:3},{id:"2",name:"Víctor Orrego",day:3,month:4},
   {id:"3",name:"Martha",day:18,month:4},{id:"4",name:"Javier",day:28,month:4},
@@ -68,19 +74,21 @@ const INITIAL_FECHAS = [
   {id:"f3",name:"Devengado HITSS",type:"mensual",day:10,emoji:"💼"},
   {id:"f4",name:"Viaje Japón",type:"unica",date:"2026-10-24",emoji:"🗾"},
 ];
+const INITIAL_CONECTAR = [
+  {id:"c1",name:"Llamar hermana 🌍",type:"simple",days:[6]},
+  {id:"c2",name:"WhatsApp mamá",type:"simple",days:[0]},
+];
 
 const MONTHS_FULL=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DAYS_SHORT=["D","L","M","M","J","V","S"];
 const DAYS_FULL=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-const PERSONS=["Camilo","Paola","Luis Torres","Marcela","David","Patricia","Jhony","Adriana","Claudia","Henry","Grace","Leo","Víctor","Bibiana","Samuel","Fabián"];
 const CATS=[{id:"laboral",label:"Laboral",color:"#1B4FD8",bg:"#EEF4FF",dot:"🔵"},{id:"personal",label:"Personal",color:"#7C3AED",bg:"#F5F3FF",dot:"🟣"},{id:"sin",label:"Sin definir",color:"#64748B",bg:"#F1F5F9",dot:"⚪"}];
 const STATUS_CFG={pendiente:{label:"Pendiente",color:"#64748B"},en_proceso:{label:"En proceso",color:"#1B4FD8"},esperando:{label:"Esperando",color:"#EA580C"},listo:{label:"✓ Listo",color:"#16A34A"}};
 const STATUS_CYCLE=["pendiente","en_proceso","esperando","listo"];
 const TIPO_CONFIG={anual:{label:"Anual",desc:"Misma fecha cada año",icon:"📅",color:"#1B4FD8",bg:"#EEF4FF"},mensual:{label:"Mensual",desc:"Misma fecha cada mes",icon:"🔁",color:"#059669",bg:"#ECFDF5"},unica:{label:"Única",desc:"Solo ocurre una vez",icon:"📌",color:"#DC2626",bg:"#FEF2F2"}};
 
 // ─── HELPERS ─────────────────────────────────────────────────
-const ds=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const todayStr=()=>ds(new Date());
+const dStr=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const getSem=(s)=>{const d=(Date.now()-new Date(s))/86400000;return d<3?"#22C55E":d<7?"#F59E0B":"#EF4444";};
 const fmt=(s)=>new Date(s).toLocaleDateString("es-CO",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const daysUntilBday=(day,month)=>{const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());let next=new Date(now.getFullYear(),month-1,day);if(next<today)next.setFullYear(now.getFullYear()+1);return Math.round((next-today)/86400000);};
@@ -90,11 +98,14 @@ const formatFechaLabel=(f)=>{if(f.type==="mensual")return`Día ${f.day} de cada 
 const dueSem=(s)=>{if(!s)return null;const today=new Date();today.setHours(0,0,0,0);const d=new Date(s);d.setHours(0,0,0,0);const diff=Math.round((d-today)/86400000);if(diff<0)return{color:"#EF4444",label:"Vencida",bg:"#FEF2F2"};if(diff===0)return{color:"#F59E0B",label:"Hoy",bg:"#FEF3C7"};return{color:"#22C55E",label:`${diff}d`,bg:"#F0FDF4"};};
 const fmtDue=(s)=>{if(!s)return"";return new Date(s).toLocaleDateString("es-CO",{day:"numeric",month:"short"});};
 const moveArr=(arr,idx,dir)=>{const to=idx+dir;if(to<0||to>=arr.length)return arr;const a=[...arr];[a[idx],a[to]]=[a[to],a[idx]];return a;};
-
-// ─── STORAGE helpers ─────────────────────────────────────────
 const load=(key,def=[])=>{try{const v=JSON.parse(localStorage.getItem(key));return v&&Array.isArray(v)?v:def;}catch{return def;}};
 const save=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch{}};
-const loadObj=(key,def={})=>{try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:def;}catch{return def;}};
+const loadObj=(key,def={})=>{try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"&&!Array.isArray(v)?v:def;}catch{return def;}};
+
+// ─── PERSONS STORE ───────────────────────────────────────────
+const loadPersons=()=>{const saved=load(SK_PERSONS,[]);return saved.length>0?saved:DEFAULT_PERSONS;};
+const savePersons=(p)=>save(SK_PERSONS,p);
+const addPersonIfNew=(name,persons,setPersons)=>{if(name&&!persons.includes(name)){const updated=[...persons,name];setPersons(updated);savePersons(updated);}};
 
 // ─── BACKUP ──────────────────────────────────────────────────
 const doBackup=()=>{const data={ts:new Date().toISOString()};ALL_KEYS.forEach(k=>{data[k]=localStorage.getItem(k);});const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`backup_diego_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);localStorage.setItem(SK_BKDATE,new Date().toISOString());};
@@ -103,7 +114,7 @@ const needsBackup=()=>{const l=localStorage.getItem(SK_BKDATE);if(!l)return fals
 const lastBackupLabel=()=>{const l=localStorage.getItem(SK_BKDATE);if(!l)return"Nunca";const d=(Date.now()-new Date(l))/86400000;if(d<1)return"Hoy";if(d<2)return"Ayer";return`Hace ${Math.floor(d)} días`;};
 
 // ─── SHARED UI ───────────────────────────────────────────────
-function MoveBtn({idx,total,onMove}) {
+function MoveBtn({idx,total,onMove}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
       <button onClick={()=>onMove(-1)} disabled={idx===0} style={{background:idx===0?"#F1F5F9":"#EEF4FF",border:"none",borderRadius:6,width:26,height:26,cursor:idx===0?"default":"pointer",color:idx===0?"#CBD5E1":"#1B4FD8",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>↑</button>
@@ -111,13 +122,12 @@ function MoveBtn({idx,total,onMove}) {
     </div>
   );
 }
-
-function HdrBtn({onClick,label,bg="rgba(255,255,255,0.18)"}) {
-  return <button onClick={onClick} style={{background:bg,border:"none",borderRadius:10,padding:"6px 14px",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>;
+function HdrBtn({onClick,label}){
+  return <button onClick={onClick} style={{background:"rgba(255,255,255,0.18)",border:"none",borderRadius:10,padding:"6px 14px",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>;
 }
 
 // ─── TASK CARD ───────────────────────────────────────────────
-function TaskCard({item,idx,items,setItems,showPerson}) {
+function TaskCard({item,idx,items,setItems,showPerson,persons,setPersons}){
   const [showP,setShowP]=useState(false);
   const [customP,setCustomP]=useState("");
   const [editing,setEditing]=useState(false);
@@ -129,7 +139,7 @@ function TaskCard({item,idx,items,setItems,showPerson}) {
   const ds2=dueSem(item.dueDate);
   const upd=(patch)=>setItems(p=>p.map(i=>i.id===item.id?{...i,...patch}:i));
   const cycleStatus=()=>{const ci=STATUS_CYCLE.indexOf(item.status||"pendiente");upd({status:STATUS_CYCLE[(ci+1)%STATUS_CYCLE.length]});};
-  const setPerson=(p)=>{upd({person:p});setShowP(false);setCustomP("");};
+  const setPerson=(p)=>{if(p)addPersonIfNew(p,persons,setPersons);upd({person:p});setShowP(false);setCustomP("");};
   const saveEdit=()=>{if(editTxt.trim())upd({text:editTxt.trim()});setEditing(false);};
   return(
     <div style={{background:isListo?"#F0FDF4":"#fff",borderRadius:14,border:isListo?"1.5px solid #BBF7D0":`1.5px solid ${sem}22`,boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:10}}>
@@ -158,12 +168,18 @@ function TaskCard({item,idx,items,setItems,showPerson}) {
               <button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
             </div>
           )}
-          {showPerson&&<div style={{marginTop:6}}><button onClick={()=>setShowP(!showP)} style={{background:item.person?"#EEF4FF":"#F8FAFF",border:item.person?"none":"1.5px dashed #CBD5E1",borderRadius:8,padding:"3px 10px",fontSize:11,color:item.person?"#1B4FD8":"#94A3B8",fontWeight:600,cursor:"pointer"}}>👤 {item.person||"Asignar persona"}</button></div>}
+          {showPerson&&(
+            <div style={{marginTop:6}}>
+              <button onClick={()=>setShowP(!showP)} style={{background:item.person?"#EEF4FF":"#F8FAFF",border:item.person?"none":"1.5px dashed #CBD5E1",borderRadius:8,padding:"3px 10px",fontSize:11,color:item.person?"#1B4FD8":"#94A3B8",fontWeight:600,cursor:"pointer"}}>
+                👤 {item.person||"Asignar persona"}
+              </button>
+            </div>
+          )}
           {showPerson&&showP&&(
             <div style={{marginTop:8}}>
               <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                 <button onClick={()=>setPerson(null)} style={{background:"#F1F5F9",color:"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>— Ninguna</button>
-                {PERSONS.map(p=>(<button key={p} onClick={()=>setPerson(p)} style={{background:item.person===p?"#1B4FD8":"#F1F5F9",color:item.person===p?"#fff":"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>{p}</button>))}
+                {persons.map(p=>(<button key={p} onClick={()=>setPerson(p)} style={{background:item.person===p?"#1B4FD8":"#F1F5F9",color:item.person===p?"#fff":"#475569",border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>{p}</button>))}
               </div>
               <div style={{display:"flex",gap:6}}>
                 <input value={customP} onChange={e=>setCustomP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&customP.trim())setPerson(customP.trim());}} placeholder="Otra persona..." style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 10px",fontSize:12,fontFamily:"inherit",outline:"none",color:"#0F172A"}}/>
@@ -186,42 +202,29 @@ function TaskCard({item,idx,items,setItems,showPerson}) {
 // ═══════════════════════════════════════════════════════════════
 // ⚡ BASURERO
 // ═══════════════════════════════════════════════════════════════
-function Basurero({onMoved,onBackup}) {
+function Basurero({onMoved,onBackup}){
   const [items,setItems]=useState(()=>load(SK_TASKS));
-  const [text,setText]=useState("");
-  const [note,setNote]=useState("");
-  const [cat,setCat]=useState("sin");
-  const [showNote,setShowNote]=useState(false);
-  const [flash,setFlash]=useState(null);
+  const [text,setText]=useState("");const [note,setNote]=useState("");const [cat,setCat]=useState("sin");
+  const [showNote,setShowNote]=useState(false);const [flash,setFlash]=useState(null);
   const inputRef=useRef(null);
-
   useEffect(()=>save(SK_TASKS,items),[items]);
-
   const add=()=>{
     if(!text.trim())return;
     const item={id:Date.now().toString(),text:text.trim(),note:note.trim(),cat,createdAt:new Date().toISOString()};
-    setItems(p=>[item,...p]);
-    setFlash(item.id);setTimeout(()=>setFlash(null),500);
-    setText("");setNote("");setCat("sin");setShowNote(false);
-    inputRef.current?.focus();
+    setItems(p=>[item,...p]);setFlash(item.id);setTimeout(()=>setFlash(null),500);
+    setText("");setNote("");setCat("sin");setShowNote(false);inputRef.current?.focus();
   };
-
   const moveToList=(item)=>{
-    // 1. Remove from basurero immediately
     const newItems=items.filter(i=>i.id!==item.id);
-    setItems(newItems);
-    save(SK_TASKS,newItems);
-    // 2. Add to destination only if not already there
+    setItems(newItems);save(SK_TASKS,newItems);
     const destKey=item.cat==="laboral"?SK_LABORAL:SK_PERSONAL;
     const existing=load(destKey);
     if(!existing.some(e=>e.id===item.id)){
       const newItem={id:item.id,text:item.text,note:item.note,cat:item.cat==="sin"?"personal":item.cat,createdAt:item.createdAt,status:"pendiente",person:null,dueDate:null};
       save(destKey,[...existing,newItem]);
     }
-    // 3. Navigate
     onMoved(item.cat==="laboral"?"laboral":"personal");
   };
-
   return(
     <div style={{padding:"0 0 20px"}}>
       <div style={{background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
@@ -280,10 +283,11 @@ function Basurero({onMoved,onBackup}) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔵 LABORAL
+// 🔵 LABORAL — fix: espacio entre header y grupos
 // ═══════════════════════════════════════════════════════════════
-function Laboral({onBackup}) {
+function Laboral({onBackup}){
   const [items,setItems]=useState(()=>load(SK_LABORAL));
+  const [persons,setPersons]=useState(()=>loadPersons());
   const [filter,setFilter]=useState("todos");
   const [view,setView]=useState("lista");
   useEffect(()=>save(SK_LABORAL,items),[items]);
@@ -295,29 +299,32 @@ function Laboral({onBackup}) {
       <div style={{background:"linear-gradient(135deg,#1B4FD8,#2563EB)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
-          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🔵</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Laboral</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300,marginBottom:0}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🔵</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Laboral</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{items.length} tarea{items.length!==1?"s":""}</p></div>
           <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
             <HdrBtn onClick={onBackup} label="💾 Backup"/>
             <HdrBtn onClick={()=>setView(v=>v==="lista"?"persona":"lista")} label={view==="lista"?"👥 Persona":"📋 Lista"}/>
           </div>
         </div>
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:12}}>
-          {[{id:"todos",l:`Todos (${counts.todos})`},{id:"pendiente",l:`Pendiente`},{id:"en_proceso",l:`En proceso`},{id:"esperando",l:`Esperando`}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.l}</button>))}
+          {[{id:"todos",l:`Todos (${counts.todos})`},{id:"pendiente",l:"Pendiente"},{id:"en_proceso",l:"En proceso"},{id:"esperando",l:"Esperando"}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.l}</button>))}
         </div>
       </div>
-      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:5}}>
-        {items.length===0?(<div style={{background:"#fff",borderRadius:16,padding:"48px 20px",textAlign:"center",color:"#94A3B8",boxShadow:"0 4px 20px rgba(27,79,216,0.08)"}}><div style={{fontSize:40,marginBottom:10}}>🔵</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas laborales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>):
-        view==="lista"?(
+      {/* FIX: padding top extra para separar header del primer grupo */}
+      <div style={{padding:"20px 16px 0",marginTop:-18,position:"relative",zIndex:5}}>
+        {items.length===0?(
+          <div style={{background:"#fff",borderRadius:16,padding:"48px 20px",textAlign:"center",color:"#94A3B8",boxShadow:"0 4px 20px rgba(27,79,216,0.08)"}}><div style={{fontSize:40,marginBottom:10}}>🔵</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas laborales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>
+        ):view==="lista"?(
           filtered.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p>Sin tareas con ese filtro</p></div>):
-          filtered.map((item,idx)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true}/>)
+          filtered.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true} persons={persons} setPersons={setPersons}/>)
         ):(
           Object.entries(byPerson()).sort(([a],[b])=>a==="Sin asignar"?1:b==="Sin asignar"?-1:a.localeCompare(b)).map(([person,tasks])=>(
-            <div key={person} style={{marginBottom:20}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#1B4FD8,#2563EB)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700}}>{person==="Sin asignar"?"?":person.charAt(0)}</div>
-                <div><p style={{fontSize:13,fontWeight:700,color:"#0F172A",margin:0}}>{person}</p><p style={{fontSize:10,color:"#94A3B8",margin:0}}>{tasks.length} tarea{tasks.length!==1?"s":""}</p></div>
+            <div key={person} style={{marginBottom:28}}>
+              {/* FIX: group header con fondo suave y separación clara */}
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 12px",background:"#EEF4FF",borderRadius:12}}>
+                <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#1B4FD8,#2563EB)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:"#fff",fontWeight:700,flexShrink:0}}>{person==="Sin asignar"?"?":person.charAt(0).toUpperCase()}</div>
+                <div><p style={{fontSize:14,fontWeight:700,color:"#1B4FD8",margin:0}}>{person}</p><p style={{fontSize:11,color:"#64748B",margin:0}}>{tasks.length} tarea{tasks.length!==1?"s":""}</p></div>
               </div>
-              {tasks.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true}/>)}
+              {tasks.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={true} persons={persons} setPersons={setPersons}/>)}
             </div>
           ))
         )}
@@ -329,8 +336,9 @@ function Laboral({onBackup}) {
 // ═══════════════════════════════════════════════════════════════
 // 🟣 PERSONAL
 // ═══════════════════════════════════════════════════════════════
-function Personal({onBackup}) {
+function Personal({onBackup}){
   const [items,setItems]=useState(()=>load(SK_PERSONAL));
+  const [persons,setPersons]=useState(()=>loadPersons());
   const [filter,setFilter]=useState("todos");
   useEffect(()=>save(SK_PERSONAL,items),[items]);
   const filtered=items.filter(i=>filter==="todos"||i.status===filter);
@@ -347,82 +355,149 @@ function Personal({onBackup}) {
           {[{id:"todos",l:`Todos (${counts.todos})`},{id:"pendiente",l:"Pendiente"},{id:"en_proceso",l:"En proceso"},{id:"esperando",l:"Esperando"}].map(f=>(<button key={f.id} onClick={()=>setFilter(f.id)} style={{background:filter===f.id?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.1)",border:filter===f.id?"1px solid rgba(255,255,255,0.5)":"1px solid transparent",borderRadius:10,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer"}}>{f.l}</button>))}
         </div>
       </div>
-      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:5}}>
+      <div style={{padding:"20px 16px 0",marginTop:-18,position:"relative",zIndex:5}}>
         {items.length===0?(<div style={{background:"#fff",borderRadius:16,padding:"48px 20px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:40,marginBottom:10}}>🟣</div><p style={{fontSize:15,fontWeight:500}}>Sin tareas personales</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Mueve tareas desde el Basurero</p></div>):
         filtered.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p>Sin tareas con ese filtro</p></div>):
-        filtered.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={false}/>)}
+        filtered.map((item)=><TaskCard key={item.id} item={item} idx={items.indexOf(item)} items={items} setItems={setItems} showPerson={false} persons={persons} setPersons={setPersons}/>)}
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🏋️ HÁBITOS
+// 📝 NOTAS — nuevo módulo
 // ═══════════════════════════════════════════════════════════════
-function Habitos({onBackup}) {
-  const [habits,setHabits]=useState(()=>{const s=load(SK_HABITS);return s.length>0?s:INITIAL_HABITS;});
-  const [logs,setLogs]=useState(()=>loadObj(SK_LOGS));
-  const [view,setView]=useState("today");
-  const [offset,setOffset]=useState(0);
-  const [showForm,setShowForm]=useState(false);
-  const [editH,setEditH]=useState(null);
+function Notas({onBackup}){
+  const [items,setItems]=useState(()=>load(SK_NOTAS));
+  const [text,setText]=useState("");
+  const inputRef=useRef(null);
+  useEffect(()=>save(SK_NOTAS,items),[items]);
+  const add=()=>{if(!text.trim())return;setItems(p=>[{id:Date.now().toString(),text:text.trim(),createdAt:new Date().toISOString()},...p]);setText("");inputRef.current?.focus();};
+
+  const NoteItem=({item,idx})=>{
+    const [editing,setEditing]=useState(false);
+    const [et,setEt]=useState(item.text);
+    const saveEdit=()=>{if(et.trim())setItems(p=>p.map(i=>i.id===item.id?{...i,text:et.trim()}:i));setEditing(false);};
+    return(
+      <div style={{background:"#fff",borderRadius:14,border:"1.5px solid rgba(234,179,8,0.15)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"flex-start",padding:"12px 14px 10px",gap:8}}>
+          <MoveBtn idx={idx} total={items.length} onMove={(d)=>setItems(p=>moveArr(p,idx,d))}/>
+          <div style={{flex:1,minWidth:0}}>
+            {editing?(
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <textarea value={et} onChange={e=>setEt(e.target.value)} rows={3} autoFocus style={{width:"100%",border:"1.5px solid #EAB308",borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none",resize:"none",boxSizing:"border-box"}}/>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={saveEdit} style={{flex:1,background:"#EAB308",color:"#fff",border:"none",borderRadius:8,padding:"7px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Guardar</button>
+                  <button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"7px 12px",fontSize:12,cursor:"pointer"}}>Cancelar</button>
+                </div>
+              </div>
+            ):(
+              <>
+                <p style={{fontSize:14,fontWeight:400,color:"#0F172A",lineHeight:1.5,wordBreak:"break-word",margin:0}}>{item.text}</p>
+                <p style={{fontSize:10,color:"#94A3B8",marginTop:5,fontWeight:300}}>{fmt(item.createdAt)}</p>
+              </>
+            )}
+          </div>
+          {!editing&&(
+            <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+              <button onClick={()=>{setEditing(true);setEt(item.text);}} style={{background:"#FEFCE8",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#854D0E"}}>✏️</button>
+              <button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return(
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#CA8A04,#EAB308)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>📝</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Notas</span></div><p style={{color:"rgba(255,255,255,0.7)",fontSize:12,fontWeight:300}}>{items.length} nota{items.length!==1?"s":""} · cosas que debo recordar</p></div>
+          <HdrBtn onClick={onBackup} label="💾 Backup"/>
+        </div>
+      </div>
+      <div style={{padding:"0 16px",marginTop:-18,position:"relative",zIndex:10}}>
+        <div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(202,138,4,0.12)",border:"1.5px solid rgba(234,179,8,0.15)",overflow:"hidden"}}>
+          <textarea ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();add();}}} placeholder="Escribe algo que no quieres olvidar..." rows={3} style={{width:"100%",border:"none",padding:"16px 16px 8px",fontSize:15,resize:"none",background:"transparent",color:"#0F172A",lineHeight:1.5,fontFamily:"inherit"}}/>
+          <div style={{display:"flex",justifyContent:"flex-end",padding:"4px 14px 14px"}}>
+            <button onClick={add} disabled={!text.trim()} style={{background:text.trim()?"linear-gradient(135deg,#CA8A04,#EAB308)":"#E2E8F0",color:text.trim()?"#fff":"#94A3B8",border:"none",borderRadius:12,padding:"10px 22px",fontSize:13,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed"}}>Guardar ↵</button>
+          </div>
+        </div>
+      </div>
+      <div style={{padding:"16px 16px 0"}}>
+        {items.length===0?(<div style={{textAlign:"center",padding:"40px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>📝</div><p style={{fontSize:15,fontWeight:500}}>Sin notas</p><p style={{fontSize:12,marginTop:6,fontWeight:300}}>Escribe cosas que no quieres olvidar</p></div>):
+        items.map((item,idx)=><NoteItem key={item.id} item={item} idx={idx}/>)}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HÁBITOS ENGINE — reutilizable para Hábitos y Conectar
+// ═══════════════════════════════════════════════════════════════
+function HabitEngine({title,icon,color1,color2,storageKey,logsKey,initial,onBackup}){
+  const [habits,setHabits]=useState(()=>{const s=load(storageKey);return s.length>0?s:initial;});
+  const [logs,setLogs]=useState(()=>loadObj(logsKey));
+  const [view,setView]=useState("today");const [offset,setOffset]=useState(0);
+  const [showForm,setShowForm]=useState(false);const [editH,setEditH]=useState(null);
   const [nName,setNName]=useState("");const [nType,setNType]=useState("simple");const [nDays,setNDays]=useState([0,1,2,3,4,5,6]);
-  useEffect(()=>save(SK_HABITS,habits),[habits]);
-  useEffect(()=>{try{localStorage.setItem(SK_LOGS,JSON.stringify(logs));}catch{}},[logs]);
+  useEffect(()=>save(storageKey,habits),[habits]);
+  useEffect(()=>{try{localStorage.setItem(logsKey,JSON.stringify(logs));}catch{}},[logs]);
   const sd=()=>{const d=new Date();d.setDate(d.getDate()+offset);return d;};
-  const sel=sd();const selDow=sel.getDay();const selKey=ds(sel);const isToday=offset===0;
+  const sel=sd();const selDow=sel.getDay();const selKey=dStr(sel);const isToday=offset===0;
   const selLbl=()=>{if(offset===0)return"Hoy";if(offset===-1)return"Ayer";return`${DAYS_FULL[selDow]} ${sel.getDate()} ${MONTHS_FULL[sel.getMonth()+1].slice(0,3)}`;};
   const lk=(hid,slot=null)=>slot?`${selKey}_${hid}_${slot}`:`${selKey}_${hid}`;
   const cycleLog=(hid,slot=null)=>{const k=lk(hid,slot);setLogs(p=>{const cur=p[k];const next=cur==null?"done":cur==="done"?"skip":null;const u={...p};if(next==null)delete u[k];else u[k]=next;return u;});};
-  const streak=(h)=>{let s=0;let d=new Date();d.setDate(d.getDate()-1);for(let i=0;i<90;i++){const dow=d.getDay();if(h.days.includes(dow)){if(h.type==="timed"){const aD=h.slots.every(sl=>logs[`${ds(d)}_${h.id}_${sl}`]==="done");const aS=h.slots.some(sl=>logs[`${ds(d)}_${h.id}_${sl}`]==="skip");if(aD)s++;else if(aS)break;}else{const v=logs[`${ds(d)}_${h.id}`];if(v==="done")s++;else if(v==="skip")break;}}d.setDate(d.getDate()-1);}return s;};
-  const pct=(h)=>{const now=new Date();let done=0,total=0;for(let day=1;day<=now.getDate();day++){const d=new Date(now.getFullYear(),now.getMonth(),day);if(!h.days.includes(d.getDay()))continue;total++;if(h.type==="timed"){if(h.slots.every(s=>logs[`${ds(d)}_${h.id}_${s}`]==="done"))done++;}else{if(logs[`${ds(d)}_${h.id}`]==="done")done++;}}return total===0?null:Math.round((done/total)*100);};
+  const streakH=(h)=>{let s=0;let d=new Date();d.setDate(d.getDate()-1);for(let i=0;i<90;i++){const dow=d.getDay();if(h.days.includes(dow)){if(h.type==="timed"){const aD=h.slots.every(sl=>logs[`${dStr(d)}_${h.id}_${sl}`]==="done");const aS=h.slots.some(sl=>logs[`${dStr(d)}_${h.id}_${sl}`]==="skip");if(aD)s++;else if(aS)break;}else{const v=logs[`${dStr(d)}_${h.id}`];if(v==="done")s++;else if(v==="skip")break;}}d.setDate(d.getDate()-1);}return s;};
+  const pctH=(h)=>{const now=new Date();let done=0,total=0;for(let day=1;day<=now.getDate();day++){const d=new Date(now.getFullYear(),now.getMonth(),day);if(!h.days.includes(d.getDay()))continue;total++;if(h.type==="timed"){if(h.slots.every(s=>logs[`${dStr(d)}_${h.id}_${s}`]==="done"))done++;}else{if(logs[`${dStr(d)}_${h.id}`]==="done")done++;}}return total===0?null:Math.round((done/total)*100);};
   const openAdd=()=>{setEditH(null);setNName("");setNType("simple");setNDays([0,1,2,3,4,5,6]);setShowForm(true);};
   const openEdit=(h)=>{setEditH(h);setNName(h.name);setNType(h.type);setNDays([...h.days]);setShowForm(true);};
   const saveH=()=>{if(!nName.trim())return;if(editH){setHabits(p=>p.map(h=>h.id===editH.id?{...h,name:nName.trim(),type:nType,days:nDays,...(nType==="timed"&&!h.slots?{slots:["Mañana","Tarde","Noche"]}:{})}:h));}else{setHabits(p=>[...p,{id:Date.now().toString(),name:nName.trim(),type:nType,days:nDays,...(nType==="timed"?{slots:["Mañana","Tarde","Noche"]}:{})}]);}setShowForm(false);setEditH(null);};
   const habitsForDay=habits.filter(h=>h.days.includes(selDow));
   return(
     <div style={{padding:"0 0 20px"}}>
-      <div style={{background:"linear-gradient(135deg,#059669,#10B981)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
+      <div style={{background:`linear-gradient(135deg,${color1},${color2})`,padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
-          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🏋️</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Hábitos</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})}</p></div>
+          <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>{icon}</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>{title}</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})}</p></div>
           <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
             <HdrBtn onClick={onBackup} label="💾 Backup"/>
-            <HdrBtn onClick={openAdd} label="+ Hábito"/>
+            <HdrBtn onClick={openAdd} label={`+ ${title.split(' ')[0]}`}/>
           </div>
         </div>
         <div style={{display:"flex",marginTop:14,background:"rgba(0,0,0,0.15)",borderRadius:10,padding:3,width:"fit-content"}}>
-          {[["today","📅 Días"],["month","📊 Mes"]].map(([v,l])=>(<button key={v} onClick={()=>setView(v)} style={{border:"none",borderRadius:8,padding:"6px 18px",fontSize:12,fontWeight:600,cursor:"pointer",background:view===v?"white":"transparent",color:view===v?"#059669":"rgba(255,255,255,0.7)"}}>{l}</button>))}
+          {[["today","📅 Días"],["month","📊 Mes"]].map(([v,l])=>(<button key={v} onClick={()=>setView(v)} style={{border:"none",borderRadius:8,padding:"6px 18px",fontSize:12,fontWeight:600,cursor:"pointer",background:view===v?"white":"transparent",color:view===v?color1:"rgba(255,255,255,0.7)"}}>{l}</button>))}
         </div>
       </div>
       {showForm&&(
         <div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}>
-          <div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(5,150,105,0.15)",border:"1.5px solid rgba(5,150,105,0.15)",padding:16}}>
-            <p style={{fontSize:13,fontWeight:600,color:"#059669",marginBottom:12}}>{editH?"Editar hábito":"Nuevo hábito"}</p>
-            <input value={nName} onChange={e=>setNName(e.target.value)} placeholder="Nombre del hábito" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
-            <div style={{display:"flex",gap:8,marginBottom:10}}>{[["simple","Simple ✅"],["timed","Por horario 🕐"]].map(([v,l])=>(<button key={v} onClick={()=>setNType(v)} style={{flex:1,border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",background:nType===v?"#ECFDF5":"#F8FAFF",color:nType===v?"#059669":"#94A3B8",outline:nType===v?"2px solid #059669":"2px solid transparent"}}>{l}</button>))}</div>
+          <div style={{background:"#fff",borderRadius:16,boxShadow:`0 8px 32px ${color1}22`,border:`1.5px solid ${color1}22`,padding:16}}>
+            <p style={{fontSize:13,fontWeight:600,color:color1,marginBottom:12}}>{editH?"Editar":"Nuevo"} {title}</p>
+            <input value={nName} onChange={e=>setNName(e.target.value)} placeholder={`Nombre`} style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",marginBottom:10,boxSizing:"border-box",color:"#0F172A",outline:"none"}}/>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>{[["simple","Simple ✅"],["timed","Por horario 🕐"]].map(([v,l])=>(<button key={v} onClick={()=>setNType(v)} style={{flex:1,border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",background:nType===v?`${color1}18`:"#F8FAFF",color:nType===v?color1:"#94A3B8",outline:nType===v?`2px solid ${color1}`:"2px solid transparent"}}>{l}</button>))}</div>
             <p style={{fontSize:11,color:"#64748B",fontWeight:600,marginBottom:6}}>Días:</p>
-            <div style={{display:"flex",gap:5,marginBottom:14}}>{["D","L","M","M","J","V","S"].map((d,i)=>(<button key={i} onClick={()=>setNDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{flex:1,border:"none",borderRadius:8,padding:"7px 0",fontSize:11,fontWeight:700,cursor:"pointer",background:nDays.includes(i)?"#059669":"#F1F5F9",color:nDays.includes(i)?"white":"#94A3B8"}}>{d}</button>))}</div>
+            <div style={{display:"flex",gap:5,marginBottom:14}}>{["D","L","M","M","J","V","S"].map((d,i)=>(<button key={i} onClick={()=>setNDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{flex:1,border:"none",borderRadius:8,padding:"7px 0",fontSize:11,fontWeight:700,cursor:"pointer",background:nDays.includes(i)?color1:"#F1F5F9",color:nDays.includes(i)?"white":"#94A3B8"}}>{d}</button>))}</div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setShowForm(false);setEditH(null);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:"#fff",color:"#64748B"}}>Cancelar</button>
-              <button onClick={saveH} disabled={!nName.trim()} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:nName.trim()?"linear-gradient(135deg,#059669,#10B981)":"#E2E8F0",color:nName.trim()?"#fff":"#94A3B8"}}>Guardar</button>
+              <button onClick={saveH} disabled={!nName.trim()} style={{flex:2,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",background:nName.trim()?`linear-gradient(135deg,${color1},${color2})`:"#E2E8F0",color:nName.trim()?"#fff":"#94A3B8"}}>Guardar</button>
             </div>
           </div>
         </div>
       )}
       {view==="today"?(
         <div style={{padding:"16px 16px 0"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,background:"#fff",borderRadius:14,padding:"10px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",border:"1.5px solid rgba(5,150,105,0.08)"}}>
-            <button onClick={()=>setOffset(o=>o-1)} style={{background:"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:"pointer",color:"#059669",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>←</button>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,background:"#fff",borderRadius:14,padding:"10px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+            <button onClick={()=>setOffset(o=>o-1)} style={{background:`${color1}18`,border:"none",borderRadius:9,width:34,height:34,cursor:"pointer",color:color1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>←</button>
             <div style={{textAlign:"center"}}><p style={{fontSize:14,fontWeight:700,color:"#0F172A",margin:0}}>{selLbl()}</p><p style={{fontSize:11,color:"#94A3B8",margin:0}}>{sel.toLocaleDateString("es-CO",{day:"numeric",month:"long"})}</p></div>
-            <button onClick={()=>setOffset(o=>Math.min(0,o+1))} disabled={isToday} style={{background:isToday?"#F1F5F9":"#ECFDF5",border:"none",borderRadius:9,width:34,height:34,cursor:isToday?"default":"pointer",color:isToday?"#CBD5E1":"#059669",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>→</button>
+            <button onClick={()=>setOffset(o=>Math.min(0,o+1))} disabled={isToday} style={{background:isToday?"#F1F5F9":`${color1}18`,border:"none",borderRadius:9,width:34,height:34,cursor:isToday?"default":"pointer",color:isToday?"#CBD5E1":color1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>→</button>
           </div>
-          {habitsForDay.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p style={{fontSize:14}}>No hay hábitos para este día</p></div>):(
+          {habitsForDay.length===0?(<div style={{textAlign:"center",padding:"32px",color:"#94A3B8"}}><p style={{fontSize:14}}>No hay {title.toLowerCase()} para este día</p></div>):(
             habitsForDay.map((habit)=>{
-              const hi=habits.findIndex(h=>h.id===habit.id);
-              const str=streak(habit);const p=pct(habit);
+              const hi=habits.findIndex(h=>h.id===habit.id);const str=streakH(habit);const p=pctH(habit);
               return(
-                <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(16,185,129,0.1)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:12}}>
+                <div key={habit.id} style={{background:"#fff",borderRadius:16,border:`1.5px solid ${color1}18`,boxShadow:"0 2px 8px rgba(0,0,0,0.04)",overflow:"hidden",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",padding:"12px 14px 8px",gap:8}}>
                     <MoveBtn idx={hi} total={habits.length} onMove={(d)=>setHabits(p=>moveArr(p,hi,d))}/>
                     <div style={{flex:1}}><p style={{fontSize:15,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p><div style={{display:"flex",gap:10,marginTop:2}}>{str>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:600}}>🔥 {str}d</span>}{p!==null&&<span style={{fontSize:11,color:"#64748B"}}>{p}% mes</span>}</div></div>
@@ -444,13 +519,13 @@ function Habitos({onBackup}) {
       ):(
         <div style={{padding:"16px 16px 0"}}>
           <p style={{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:16,textAlign:"center"}}>{MONTHS_FULL[new Date().getMonth()+1]} {new Date().getFullYear()}</p>
-          {habits.map(habit=>{const str=streak(habit);const p=pct(habit);const now=new Date();const year=now.getFullYear();const month=now.getMonth();const dim=new Date(year,month+1,0).getDate();const fdow=new Date(year,month,1).getDay();return(
+          {habits.map(habit=>{const str=streakH(habit);const p=pctH(habit);const now=new Date();const year=now.getFullYear();const month=now.getMonth();const dim=new Date(year,month+1,0).getDate();const fdow=new Date(year,month,1).getDay();return(
             <div key={habit.id} style={{background:"#fff",borderRadius:16,border:"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",padding:"14px",marginBottom:12}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><p style={{fontSize:14,fontWeight:600,color:"#0F172A",margin:0}}>{habit.name}</p><div style={{display:"flex",gap:8}}>{str>0&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:700}}>🔥{str}</span>}{p!==null&&<span style={{fontSize:11,fontWeight:700,color:p>=80?"#16A34A":p>=50?"#F59E0B":"#DC2626"}}>{p}%</span>}</div></div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
                 {DAYS_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:9,color:"#94A3B8",fontWeight:600,paddingBottom:2}}>{d}</div>)}
                 {Array.from({length:fdow}).map((_,i)=><div key={`e${i}`}/>)}
-                {Array.from({length:dim}).map((_,i)=>{const day=i+1;const d=new Date(year,month,day);const dow=d.getDay();const dss=ds(d);const isApp=habit.days.includes(dow);const isFut=day>now.getDate();let st=null;if(isApp&&!isFut){if(habit.type==="timed"){const aD=habit.slots.every(s=>logs[`${dss}_${habit.id}_${s}`]==="done");const aS=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="skip");const aDo=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="done");if(aD)st="done";else if(aS&&aDo)st="partial";else if(aS)st="skip";}else{st=logs[`${dss}_${habit.id}`]||null;}}const isT=day===now.getDate();return(<div key={day} style={{aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,background:!isApp?"transparent":isFut?"#F1F5F9":st==="done"?"#22C55E":st==="partial"?"#F59E0B":st==="skip"?"#EF4444":"#E2E8F0",color:!isApp?"transparent":isFut?"#94A3B8":st?"white":"#94A3B8",border:isT?"2px solid #1B4FD8":"none"}}>{isApp?day:""}</div>);})}
+                {Array.from({length:dim}).map((_,i)=>{const day=i+1;const d=new Date(year,month,day);const dow=d.getDay();const dss=dStr(d);const isApp=habit.days.includes(dow);const isFut=day>now.getDate();let st=null;if(isApp&&!isFut){if(habit.type==="timed"){const aD=habit.slots.every(s=>logs[`${dss}_${habit.id}_${s}`]==="done");const aS=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="skip");const aDo=habit.slots.some(s=>logs[`${dss}_${habit.id}_${s}`]==="done");if(aD)st="done";else if(aS&&aDo)st="partial";else if(aS)st="skip";}else{st=logs[`${dss}_${habit.id}`]||null;}}const isT=day===now.getDate();return(<div key={day} style={{aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,background:!isApp?"transparent":isFut?"#F1F5F9":st==="done"?"#22C55E":st==="partial"?"#F59E0B":st==="skip"?"#EF4444":"#E2E8F0",color:!isApp?"transparent":isFut?"#94A3B8":st?"white":"#94A3B8",border:isT?`2px solid ${color1}`:"none"}}>{isApp?day:""}</div>);})}
               </div>
             </div>
           );})}
@@ -463,19 +538,14 @@ function Habitos({onBackup}) {
 // ═══════════════════════════════════════════════════════════════
 // 🛒 COMPRAS
 // ═══════════════════════════════════════════════════════════════
-function Compras({onBackup}) {
+function Compras({onBackup}){
   const [items,setItems]=useState(()=>load(SK_COMPRAS));
-  const [text,setText]=useState("");
-  const inputRef=useRef(null);
+  const [text,setText]=useState("");const inputRef=useRef(null);
   useEffect(()=>save(SK_COMPRAS,items),[items]);
   const add=()=>{if(!text.trim())return;setItems(p=>[{id:Date.now().toString(),text:text.trim(),done:false,dueDate:null},...p]);setText("");inputRef.current?.focus();};
-  const pending=items.filter(i=>!i.done);
-  const done=items.filter(i=>i.done);
-
+  const pending=items.filter(i=>!i.done);const done=items.filter(i=>i.done);
   const Item=({item,idx,total,isDone})=>{
-    const [editing,setEditing]=useState(false);
-    const [et,setEt]=useState(item.text);
-    const [showDue,setShowDue]=useState(false);
+    const [editing,setEditing]=useState(false);const [et,setEt]=useState(item.text);const [showDue,setShowDue]=useState(false);
     const upd=(patch)=>setItems(p=>p.map(i=>i.id===item.id?{...i,...patch}:i));
     const ds2=dueSem(item.dueDate);
     return(
@@ -485,36 +555,19 @@ function Compras({onBackup}) {
           <button onClick={()=>upd({done:!item.done})} style={{width:26,height:26,borderRadius:"50%",border:isDone?"2px solid #22C55E":"2px solid #EA580C",background:isDone?"#22C55E":"none",cursor:"pointer",flexShrink:0,fontSize:13,color:isDone?"#fff":"#EA580C",display:"flex",alignItems:"center",justifyContent:"center"}}>{isDone?"✓":"○"}</button>
           <div style={{flex:1,minWidth:0}}>
             {editing?(
-              <div style={{display:"flex",gap:5}}>
-                <input value={et} onChange={e=>setEt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(et.trim())upd({text:et.trim()});setEditing(false);}}} autoFocus style={{flex:1,border:"1.5px solid #EA580C",borderRadius:8,padding:"5px 8px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
-                <button onClick={()=>{if(et.trim())upd({text:et.trim()});setEditing(false);}} style={{background:"#EA580C",color:"#fff",border:"none",borderRadius:8,padding:"5px 9px",fontSize:11,cursor:"pointer"}}>OK</button>
-                <button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button>
-              </div>
+              <div style={{display:"flex",gap:5}}><input value={et} onChange={e=>setEt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(et.trim())upd({text:et.trim()});setEditing(false);}}} autoFocus style={{flex:1,border:"1.5px solid #EA580C",borderRadius:8,padding:"5px 8px",fontSize:13,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/><button onClick={()=>{if(et.trim())upd({text:et.trim()});setEditing(false);}} style={{background:"#EA580C",color:"#fff",border:"none",borderRadius:8,padding:"5px 9px",fontSize:11,cursor:"pointer"}}>OK</button><button onClick={()=>setEditing(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button></div>
             ):(
               <p style={{fontSize:15,fontWeight:isDone?400:500,color:isDone?"#64748B":"#0F172A",margin:0,textDecoration:isDone?"line-through":"none"}}>{item.text}</p>
             )}
             {item.dueDate&&ds2&&<span onClick={()=>setShowDue(!showDue)} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:ds2.bg,color:ds2.color,display:"inline-block",marginTop:3,cursor:"pointer"}}>📅 {fmtDue(item.dueDate)} · {ds2.label}</span>}
-            {showDue&&(
-              <div style={{display:"flex",gap:5,marginTop:5,alignItems:"center"}}>
-                <input type="date" value={item.dueDate||""} onChange={e=>{upd({dueDate:e.target.value});setShowDue(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>
-                {item.dueDate&&<button onClick={()=>{upd({dueDate:null});setShowDue(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Quitar</button>}
-                <button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button>
-              </div>
-            )}
+            {showDue&&(<div style={{display:"flex",gap:5,marginTop:5,alignItems:"center"}}><input type="date" value={item.dueDate||""} onChange={e=>{upd({dueDate:e.target.value});setShowDue(false);}} style={{flex:1,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:"#0F172A",outline:"none"}}/>{item.dueDate&&<button onClick={()=>{upd({dueDate:null});setShowDue(false);}} style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Quitar</button>}<button onClick={()=>setShowDue(false)} style={{background:"#F1F5F9",color:"#64748B",border:"none",borderRadius:8,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>✕</button></div>)}
           </div>
-          {!isDone&&(
-            <div style={{display:"flex",gap:3,flexShrink:0}}>
-              {!item.dueDate&&<button onClick={()=>setShowDue(!showDue)} style={{background:"#FFF7ED",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>📅</button>}
-              <button onClick={()=>{setEditing(true);setEt(item.text);}} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>✏️</button>
-              <button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
-            </div>
-          )}
+          {!isDone&&(<div style={{display:"flex",gap:3,flexShrink:0}}>{!item.dueDate&&<button onClick={()=>setShowDue(!showDue)} style={{background:"#FFF7ED",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>📅</button>}<button onClick={()=>{setEditing(true);setEt(item.text);}} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer"}}>✏️</button><button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button></div>)}
           {isDone&&<button onClick={()=>setItems(p=>p.filter(i=>i.id!==item.id))} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px",flexShrink:0}}>✕</button>}
         </div>
       </div>
     );
   };
-
   return(
     <div style={{padding:"0 0 20px"}}>
       <div style={{background:"linear-gradient(135deg,#EA580C,#F97316)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
@@ -532,15 +585,8 @@ function Compras({onBackup}) {
       </div>
       <div style={{padding:"16px 16px 0"}}>
         {items.length===0?(<div style={{textAlign:"center",padding:"40px 20px",color:"#94A3B8"}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><p style={{fontSize:15,fontWeight:500}}>Lista vacía</p></div>):(
-          <>
-            {pending.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={pending.length} isDone={false}/>)}
-            {done.length>0&&(
-              <div style={{marginTop:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,margin:0}}>✅ Comprado ({done.length})</p><button onClick={()=>setItems(p=>p.filter(i=>!i.done))} style={{background:"none",border:"none",color:"#EF4444",fontSize:11,fontWeight:600,cursor:"pointer"}}>Limpiar</button></div>
-                {done.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={done.length} isDone={true}/>)}
-              </div>
-            )}
-          </>
+          <>{pending.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={pending.length} isDone={false}/>)}
+          {done.length>0&&(<div style={{marginTop:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><p style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:1,margin:0}}>✅ Comprado ({done.length})</p><button onClick={()=>setItems(p=>p.filter(i=>!i.done))} style={{background:"none",border:"none",color:"#EF4444",fontSize:11,fontWeight:600,cursor:"pointer"}}>Limpiar</button></div>{done.map((item,idx)=><Item key={item.id} item={item} idx={idx} total={done.length} isDone={true}/>)}</div>)}</>
         )}
       </div>
     </div>
@@ -550,37 +596,19 @@ function Compras({onBackup}) {
 // ═══════════════════════════════════════════════════════════════
 // 📌 FECHAS
 // ═══════════════════════════════════════════════════════════════
-function Fechas({onBackup}) {
+function Fechas({onBackup}){
   const [fechas,setFechas]=useState(()=>{const s=load(SK_FECHAS);return s.length>0?s:INITIAL_FECHAS;});
-  const [showForm,setShowForm]=useState(false);
-  const [editF,setEditF]=useState(null);
-  const [tipo,setTipo]=useState("anual");const [name,setName]=useState("");const [emoji,setEmoji]=useState("");
-  const [day,setDay]=useState("");const [month,setMonth]=useState("");const [date,setDate]=useState("");
+  const [showForm,setShowForm]=useState(false);const [editF,setEditF]=useState(null);
+  const [tipo,setTipo]=useState("anual");const [name,setName]=useState("");const [emoji,setEmoji]=useState("");const [day,setDay]=useState("");const [month,setMonth]=useState("");const [date,setDate]=useState("");
   useEffect(()=>save(SK_FECHAS,fechas),[fechas]);
   const reset=()=>{setName("");setEmoji("");setDay("");setMonth("");setDate("");setTipo("anual");setEditF(null);};
   const openAdd=()=>{reset();setShowForm(true);};
   const openEdit=(f)=>{setEditF(f);setName(f.name);setEmoji(f.emoji||"");setTipo(f.type);setDay(f.day?String(f.day):"");setMonth(f.month?String(f.month):"");setDate(f.date||"");setShowForm(true);};
-  const saveFecha=()=>{
-    if(!name.trim())return;
-    const item={id:editF?editF.id:Date.now().toString(),name:name.trim(),emoji:emoji.trim()||TIPO_CONFIG[tipo].icon,type:tipo,
-      ...(tipo==="anual"?{day:parseInt(day),month:parseInt(month)}:{}),
-      ...(tipo==="mensual"?{day:parseInt(day)}:{}),
-      ...(tipo==="unica"?{date}:{})};
-    if(editF)setFechas(p=>p.map(f=>f.id===editF.id?item:f).sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));
-    else setFechas(p=>[...p,item].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));
-    reset();setShowForm(false);
-  };
+  const saveFecha=()=>{if(!name.trim())return;const item={id:editF?editF.id:Date.now().toString(),name:name.trim(),emoji:emoji.trim()||TIPO_CONFIG[tipo].icon,type:tipo,...(tipo==="anual"?{day:parseInt(day),month:parseInt(month)}:{}),...(tipo==="mensual"?{day:parseInt(day)}:{}),...(tipo==="unica"?{date}:{})};if(editF)setFechas(p=>p.map(f=>f.id===editF.id?item:f).sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));else setFechas(p=>[...p,item].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b)));reset();setShowForm(false);};
   const del=(id)=>setFechas(p=>p.filter(f=>f.id!==id));
   const sorted=[...fechas].sort((a,b)=>daysUntilFecha(a)-daysUntilFecha(b));
   const isOK=name.trim()&&((tipo==="anual"&&day&&month)||(tipo==="mensual"&&day)||(tipo==="unica"&&date));
-  const FCard=({f})=>{const du=daysUntilFecha(f);const cfg=TIPO_CONFIG[f.type];const isHoy=du===0;const isPast=du<0;return(
-    <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:isHoy?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":isPast?"#F8FAFF":"#fff",borderRadius:14,border:isHoy?"1.5px solid #FCD34D":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",opacity:isPast?0.7:1,marginBottom:8}}>
-      <div style={{fontSize:24,flexShrink:0}}>{f.emoji||cfg.icon}</div>
-      <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}><p style={{fontSize:14,fontWeight:600,color:isHoy?"#92400E":"#0F172A",margin:0}}>{f.name}</p><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:cfg.bg,color:cfg.color}}>{cfg.icon} {cfg.label}</span></div><p style={{fontSize:11,color:isHoy?"#B45309":"#64748B",margin:0}}>{formatFechaLabel(f)}{isHoy?" · 🎉 ¡HOY!":isPast?` · hace ${Math.abs(du)}d`:` · en ${du}d`}</p></div>
-      <button onClick={()=>openEdit(f)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
-      <button onClick={()=>del(f.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
-    </div>
-  );};
+  const FCard=({f})=>{const du=daysUntilFecha(f);const cfg=TIPO_CONFIG[f.type];const isHoy=du===0;const isPast=du<0;return(<div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:isHoy?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":isPast?"#F8FAFF":"#fff",borderRadius:14,border:isHoy?"1.5px solid #FCD34D":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",opacity:isPast?0.7:1,marginBottom:8}}><div style={{fontSize:24,flexShrink:0}}>{f.emoji||cfg.icon}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}><p style={{fontSize:14,fontWeight:600,color:isHoy?"#92400E":"#0F172A",margin:0}}>{f.name}</p><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:cfg.bg,color:cfg.color}}>{cfg.icon} {cfg.label}</span></div><p style={{fontSize:11,color:isHoy?"#B45309":"#64748B",margin:0}}>{formatFechaLabel(f)}{isHoy?" · 🎉 ¡HOY!":isPast?` · hace ${Math.abs(du)}d`:` · en ${du}d`}</p></div><button onClick={()=>openEdit(f)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button><button onClick={()=>del(f.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button></div>);};
   const Sec=({title,color,items})=>items.length===0?null:(<div style={{marginBottom:16}}><p style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{title}</p>{items.map(f=><FCard key={f.id} f={f}/>)}</div>);
   const hoy=sorted.filter(f=>daysUntilFecha(f)===0);const prox7=sorted.filter(f=>{const d=daysUntilFecha(f);return d>0&&d<=7;});const prox30=sorted.filter(f=>{const d=daysUntilFecha(f);return d>7&&d<=30;});const resto=sorted.filter(f=>daysUntilFecha(f)>30);const pasadas=sorted.filter(f=>daysUntilFecha(f)<0);
   return(
@@ -589,10 +617,7 @@ function Fechas({onBackup}) {
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
           <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>📌</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Fechas</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{fechas.length} evento{fechas.length!==1?"s":""}</p></div>
-          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-            <HdrBtn onClick={onBackup} label="💾 Backup"/>
-            <HdrBtn onClick={openAdd} label="+ Nueva"/>
-          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}><HdrBtn onClick={onBackup} label="💾 Backup"/><HdrBtn onClick={openAdd} label="+ Nueva"/></div>
         </div>
       </div>
       {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(15,118,110,0.15)",border:"1.5px solid rgba(15,118,110,0.15)",padding:16}}>
@@ -615,10 +640,9 @@ function Fechas({onBackup}) {
 // ═══════════════════════════════════════════════════════════════
 // 🎂 CUMPLEAÑOS
 // ═══════════════════════════════════════════════════════════════
-function Cumpleanos({onBackup}) {
+function Cumpleanos({onBackup}){
   const [bdays,setBdays]=useState(()=>{const s=load(SK_BDAYS);return s.length>0?s:INITIAL_BDAYS;});
-  const [showForm,setShowForm]=useState(false);
-  const [editB,setEditB]=useState(null);
+  const [showForm,setShowForm]=useState(false);const [editB,setEditB]=useState(null);
   const [nName,setNName]=useState("");const [nDay,setNDay]=useState("");const [nMonth,setNMonth]=useState("");
   useEffect(()=>save(SK_BDAYS,bdays),[bdays]);
   const openAdd=()=>{setEditB(null);setNName("");setNDay("");setNMonth("");setShowForm(true);};
@@ -627,24 +651,14 @@ function Cumpleanos({onBackup}) {
   const del=(id)=>setBdays(p=>p.filter(b=>b.id!==id));
   const sorted=[...bdays].sort((a,b)=>daysUntilBday(a.day,a.month)-daysUntilBday(b.day,b.month));
   const todayB=sorted.filter(b=>isSameDay(b.day,b.month));const soon=sorted.filter(b=>{const d=daysUntilBday(b.day,b.month);return d>0&&d<=7;});const rest=sorted.filter(b=>daysUntilBday(b.day,b.month)>7);
-  const BCard=({b})=>{const du=daysUntilBday(b.day,b.month);const td=isSameDay(b.day,b.month);return(
-    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:td?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":du<=7?"#F0FDF4":"#fff",borderRadius:13,border:td?"1.5px solid #FCD34D":du<=7?"1.5px solid #BBF7D0":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",marginBottom:8}}>
-      <div style={{fontSize:td?28:20}}>{td?"🎂":"🎈"}</div>
-      <div style={{flex:1,minWidth:0}}><p style={{fontSize:14,fontWeight:600,color:td?"#92400E":"#0F172A",margin:0}}>{b.name}</p><p style={{fontSize:12,color:td?"#B45309":"#64748B",margin:"2px 0 0"}}>{b.day} de {MONTHS_FULL[b.month]}{td?" · 🎉 ¡HOY!":`· en ${du}d`}</p></div>
-      <button onClick={()=>openEdit(b)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button>
-      <button onClick={()=>del(b.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button>
-    </div>
-  );};
+  const BCard=({b})=>{const du=daysUntilBday(b.day,b.month);const td=isSameDay(b.day,b.month);return(<div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:td?"linear-gradient(135deg,#FEF3C7,#FFF7ED)":du<=7?"#F0FDF4":"#fff",borderRadius:13,border:td?"1.5px solid #FCD34D":du<=7?"1.5px solid #BBF7D0":"1.5px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.04)",marginBottom:8}}><div style={{fontSize:td?28:20}}>{td?"🎂":"🎈"}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:14,fontWeight:600,color:td?"#92400E":"#0F172A",margin:0}}>{b.name}</p><p style={{fontSize:12,color:td?"#B45309":"#64748B",margin:"2px 0 0"}}>{b.day} de {MONTHS_FULL[b.month]}{td?" · 🎉 ¡HOY!":`· en ${du}d`}</p></div><button onClick={()=>openEdit(b)} style={{background:"#F8FAFF",border:"none",borderRadius:8,padding:"5px 7px",fontSize:12,cursor:"pointer",color:"#64748B"}}>✏️</button><button onClick={()=>del(b.id)} style={{background:"none",border:"none",color:"#CBD5E1",cursor:"pointer",fontSize:14,padding:"4px"}}>✕</button></div>);};
   return(
     <div style={{padding:"0 0 20px"}}>
       <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",padding:"24px 20px 36px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",position:"relative"}}>
           <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><span style={{fontSize:22}}>🎂</span><span style={{color:"#fff",fontSize:22,fontWeight:700}}>Cumpleaños</span></div><p style={{color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:300}}>{bdays.length} personas</p></div>
-          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
-            <HdrBtn onClick={onBackup} label="💾 Backup"/>
-            <HdrBtn onClick={openAdd} label="+ Nuevo"/>
-          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}><HdrBtn onClick={onBackup} label="💾 Backup"/><HdrBtn onClick={openAdd} label="+ Nuevo"/></div>
         </div>
       </div>
       {showForm&&(<div style={{margin:"0 16px",marginTop:-14,position:"relative",zIndex:20}}><div style={{background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(124,58,237,0.15)",border:"1.5px solid rgba(124,58,237,0.12)",padding:16}}>
@@ -663,16 +677,50 @@ function Cumpleanos({onBackup}) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// APP PRINCIPAL
+// APP PRINCIPAL — Tab bar con Más drawer
 // ═══════════════════════════════════════════════════════════════
-function App() {
+function App(){
   const [tab,setTab]=useState("basurero");
+  const [showMas,setShowMas]=useState(false);
   const [showBanner,setShowBanner]=useState(()=>needsBackup());
   const [showRestore,setShowRestore]=useState(false);
   const fileRef=useRef(null);
   const handleBackup=()=>{doBackup();setShowBanner(false);};
   const handleRestore=(e)=>{const file=e.target.files[0];if(!file)return;doRestore(file,()=>{alert("✅ Backup cargado. Recargando...");window.location.reload();});};
-  const TABS=[{id:"basurero",icon:"⚡",label:"Basurero"},{id:"laboral",icon:"🔵",label:"Laboral"},{id:"personal",icon:"🟣",label:"Personal"},{id:"habitos",icon:"🏋️",label:"Hábitos"},{id:"compras",icon:"🛒",label:"Compras"},{id:"fechas",icon:"📌",label:"Fechas"},{id:"cumpleanos",icon:"🎂",label:"Cumples"}];
+
+  const MAIN_TABS=[
+    {id:"basurero",icon:"⚡",label:"Basurero"},
+    {id:"laboral",icon:"🔵",label:"Laboral"},
+    {id:"personal",icon:"🟣",label:"Personal"},
+    {id:"habitos",icon:"🏋️",label:"Hábitos"},
+  ];
+  const MAS_TABS=[
+    {id:"conectar",icon:"🤝",label:"Conectar"},
+    {id:"notas",icon:"📝",label:"Notas"},
+    {id:"compras",icon:"🛒",label:"Compras"},
+    {id:"fechas",icon:"📌",label:"Fechas"},
+    {id:"cumpleanos",icon:"🎂",label:"Cumpleaños"},
+  ];
+
+  const activeInMas=MAS_TABS.some(t=>t.id===tab);
+
+  const goTo=(id)=>{setTab(id);setShowMas(false);};
+
+  const renderTab=()=>{
+    switch(tab){
+      case"basurero": return <Basurero onMoved={(d)=>setTab(d)} onBackup={handleBackup}/>;
+      case"laboral":  return <Laboral onBackup={handleBackup}/>;
+      case"personal": return <Personal onBackup={handleBackup}/>;
+      case"habitos":  return <HabitEngine title="Hábitos" icon="🏋️" color1="#059669" color2="#10B981" storageKey={SK_HABITS} logsKey={SK_LOGS} initial={INITIAL_HABITS} onBackup={handleBackup}/>;
+      case"conectar": return <HabitEngine title="Conectar" icon="🤝" color1="#DB2777" color2="#EC4899" storageKey={SK_CONECTAR} logsKey={SK_CLOGS} initial={INITIAL_CONECTAR} onBackup={handleBackup}/>;
+      case"notas":    return <Notas onBackup={handleBackup}/>;
+      case"compras":  return <Compras onBackup={handleBackup}/>;
+      case"fechas":   return <Fechas onBackup={handleBackup}/>;
+      case"cumpleanos": return <Cumpleanos onBackup={handleBackup}/>;
+      default: return null;
+    }
+  };
+
   return(
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#EEF4FF,#F8FAFF,#E8F0FF)",fontFamily:"'Sora',sans-serif"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;}textarea,input,select{font-family:'Sora',sans-serif;}button:active{opacity:0.8;}`}</style>
@@ -698,39 +746,44 @@ function App() {
         </div>
       )}
 
-      {/* CONTENIDO — scroll independiente, no toca el tab bar */}
-      <div style={{
-        position:"fixed",top:showBanner?(showRestore?120:56):0,
-        left:0,right:0,bottom:62,
-        overflowY:"auto",
-        WebkitOverflowScrolling:"touch",
-      }}>
-        {tab==="basurero"?<Basurero onMoved={(dest)=>setTab(dest)} onBackup={handleBackup}/>:
-         tab==="laboral"?<Laboral onBackup={handleBackup}/>:
-         tab==="personal"?<Personal onBackup={handleBackup}/>:
-         tab==="habitos"?<Habitos onBackup={handleBackup}/>:
-         tab==="compras"?<Compras onBackup={handleBackup}/>:
-         tab==="fechas"?<Fechas onBackup={handleBackup}/>:
-         <Cumpleanos onBackup={handleBackup}/>}
+      {/* MÁS DRAWER */}
+      {showMas&&(
+        <>
+          <div onClick={()=>setShowMas(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",zIndex:290}}/>
+          <div style={{position:"fixed",bottom:62,left:0,right:0,zIndex:295,background:"#fff",borderRadius:"20px 20px 0 0",padding:"16px 16px 8px",boxShadow:"0 -8px 32px rgba(0,0,0,0.15)"}}>
+            <div style={{width:36,height:4,borderRadius:2,background:"#E2E8F0",margin:"0 auto 16px"}}/>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+              {MAS_TABS.map(t=>(
+                <button key={t.id} onClick={()=>goTo(t.id)} style={{border:"none",background:tab===t.id?"#EEF4FF":"#F8FAFF",borderRadius:14,padding:"12px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,outline:tab===t.id?"2px solid #1B4FD8":"none"}}>
+                  <span style={{fontSize:22}}>{t.icon}</span>
+                  <span style={{fontSize:9,fontWeight:600,color:tab===t.id?"#1B4FD8":"#64748B"}}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* CONTENIDO */}
+      <div style={{position:"fixed",top:showBanner?(showRestore?120:56):0,left:0,right:0,bottom:62,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+        {renderTab()}
       </div>
 
-      {/* TAB BAR — siempre visible, siempre arriba */}
-      <div style={{
-        position:"fixed",bottom:0,left:0,right:0,height:62,
-        background:"rgba(255,255,255,0.97)",
-        backdropFilter:"blur(20px)",
-        borderTop:"1px solid rgba(27,79,216,0.1)",
-        display:"flex",alignItems:"center",
-        boxShadow:"0 -2px 16px rgba(0,0,0,0.07)",
-        zIndex:300,
-      }}>
-        {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"6px 0",height:"100%",justifyContent:"center"}}>
+      {/* TAB BAR */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(27,79,216,0.1)",display:"flex",alignItems:"center",boxShadow:"0 -2px 16px rgba(0,0,0,0.07)",zIndex:300}}>
+        {MAIN_TABS.map(t=>(
+          <button key={t.id} onClick={()=>{setTab(t.id);setShowMas(false);}} style={{flex:1,border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"6px 0",height:"100%",justifyContent:"center"}}>
             <span style={{fontSize:18,lineHeight:1}}>{t.icon}</span>
-            <span style={{fontSize:8,fontWeight:700,color:tab===t.id?"#1B4FD8":"#94A3B8",letterSpacing:0.2}}>{t.label}</span>
+            <span style={{fontSize:8,fontWeight:700,color:tab===t.id?"#1B4FD8":"#94A3B8"}}>{t.label}</span>
             {tab===t.id&&<div style={{width:18,height:2,borderRadius:2,background:"#1B4FD8"}}/>}
           </button>
         ))}
+        {/* Botón MÁS */}
+        <button onClick={()=>setShowMas(!showMas)} style={{flex:1,border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"6px 0",height:"100%",justifyContent:"center"}}>
+          <span style={{fontSize:18,lineHeight:1}}>···</span>
+          <span style={{fontSize:8,fontWeight:700,color:activeInMas||showMas?"#1B4FD8":"#94A3B8"}}>Más</span>
+          {(activeInMas||showMas)&&<div style={{width:18,height:2,borderRadius:2,background:"#1B4FD8"}}/>}
+        </button>
       </div>
     </div>
   );
